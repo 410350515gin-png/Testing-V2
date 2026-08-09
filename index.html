@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>排課小助手 Pro</title>
     
-    <!-- PWA Meta 設定 -->
+    <!-- PWA & Mobile Web App Meta 設定 -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="排課表">
-    <link id="dynamicAppleIcon" rel="apple-touch-icon" href="">
+    <meta id="appMobileTitle" name="apple-mobile-web-app-title" content="排課表">
+    <link id="dynamicAppleIcon" rel="apple-touch-icon" sizes="180x180" href="">
 
     <!-- 引入 Google Fonts 繁體中文全字庫無缺字字型 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -83,8 +83,6 @@
         .btn-appearance { background: #4A5B6E; color: #fff; }
         .btn-sidebar { background: #8C8275; color: #fff; }
         .btn-zoom { background: #6B7A82; color: #fff; }
-        
-        /* 淺藕粉色按鈕 */
         .btn-pwa { background: var(--c-pwa); color: #5C3A44; }
 
         /* 左側學期管理抽屜欄 */
@@ -137,17 +135,16 @@
         }
         .opt-card.selected { border-color: var(--c-submit); background: var(--card-bg); }
 
-        /* 圖示選擇器 */
-        .app-icon-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 10px; margin-top: 8px; }
+        /* 圖示選擇器修復樣式 */
+        .app-icon-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(115px, 1fr)); gap: 10px; margin-top: 8px; max-height: 300px; overflow-y: auto; padding: 4px; }
         .app-icon-card {
-            background: var(--panel-bg); border: 2px solid transparent; border-radius: 12px;
-            padding: 10px 8px; text-align: center; cursor: pointer; transition: all 0.2s;
+            background: var(--panel-bg); border: 2px solid transparent; border-radius: 14px;
+            padding: 10px 6px; text-align: center; cursor: pointer; transition: all 0.2s;
             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
         }
-        .app-icon-card.selected { border-color: var(--c-pwa); background: #FFF5F7; transform: scale(1.02); }
-        .app-icon-img { width: 68px; height: 68px; border-radius: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.06); }
-        .app-icon-title { font-size: 0.78rem; font-weight: bold; color: var(--text-main); margin-top: 2px; }
-        .app-icon-sub { font-size: 0.65rem; color: var(--text-sub); }
+        .app-icon-card.selected { border-color: var(--c-pwa); background: #FFF5F7; transform: scale(1.03); box-shadow: 0 4px 12px rgba(216, 167, 177, 0.3); }
+        .app-icon-preview-box { width: 64px; height: 64px; border-radius: 14px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: white; box-shadow: 0 3px 8px rgba(0,0,0,0.08); }
+        .app-icon-preview-box svg { width: 100%; height: 100%; display: block; }
 
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(125px, 1fr)); gap: 10px; margin-bottom: 10px; }
         .form-group { display: flex; flex-direction: column; gap: 4px; width: 100%; }
@@ -331,8 +328,8 @@
         <button id="btnRedo" class="btn btn-redo" onclick="redo()" disabled>↪️ 下一步</button>
         <button class="btn btn-save" onclick="saveToLocalStorage()">💾 儲存課表</button>
         <button class="btn btn-screenshot" onclick="openExportModal(event)">📱 截圖並分享</button>
-        <!-- ✨ 淺藕粉色「📱 儲存至主畫面」按鈕 -->
-        <button class="btn btn-pwa" onclick="triggerPwaInstall()">📱 儲存至主畫面</button>
+        <!-- 淺藕粉色「📱 儲存至主畫面」按鈕 -->
+        <button class="btn btn-pwa" onclick="openPwaModal(event)">📱 儲存至主畫面</button>
         <button class="btn btn-danger" onclick="deleteSelectedCourses()">🗑️ 刪除所選課程</button>
         <button class="btn btn-appearance" onclick="toggleAppearancePanel()">🎨 外觀設定</button>
         <button class="btn btn-zoom" id="btnZoomToggle" onclick="cycleZoomScale()">🔍 縮放: 100%</button>
@@ -355,14 +352,13 @@
             </div>
         </div>
 
-        <!-- ✨ 莫蘭迪風格 APP 圖示選擇器 -->
         <div class="setting-section">
             <div class="setting-title">📱 APP 圖示樣式選擇</div>
             <div class="app-icon-grid" id="appIconGrid"></div>
         </div>
     </div>
 
-    <!-- 課程輸入卡片 (支援摺疊/展開狀態記憶) -->
+    <!-- 課程輸入卡片 -->
     <div class="card">
         <div class="collapsible-card-header" onclick="toggleCourseFormCollapse()">
             <span class="collapsible-card-title">➕ 排入新課程設定</span>
@@ -460,7 +456,6 @@
 
     <!-- 課表區域 -->
     <div class="card table-wrapper" id="scheduleTableCard">
-        <!-- 截圖專用頂部標題（純淨大字居中，無第二行字幕） -->
         <div id="screenshotTitleBox" class="screenshot-title-box">
             <div id="screenshotMainTitle" class="screenshot-main-title">我的學期課表</div>
         </div>
@@ -611,6 +606,33 @@
     </div>
 </div>
 
+<!-- ✨ 專屬「📱 儲存至主畫面」獨立設定視窗 -->
+<div class="modal-overlay" id="pwaModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span>📱 儲存至主畫面設定</span>
+            <button class="btn" style="padding:2px 8px; background:#CBD5E1; color:#333;" onclick="closeModal('pwaModal')">✕</button>
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 12px;">
+            <label style="font-size:0.85rem; font-weight:bold; color:var(--c-pwa);">1. 應用程式名稱：</label>
+            <input type="text" id="pwaAppNameInput" value="排課表" placeholder="例：我的排課表" style="padding: 8px 10px; font-size: 0.9rem;" onchange="updatePwaTitle()">
+        </div>
+
+        <div class="setting-title" style="color:var(--c-pwa);">2. 選擇喜歡的莫蘭迪桌面圖示：</div>
+        <div class="app-icon-grid" id="pwaAppIconGrid"></div>
+
+        <div style="margin-top: 14px; font-size: 0.78rem; color: var(--text-main); line-height: 1.5; background: #FFF8F9; border: 1px solid var(--c-pwa); padding: 10px; border-radius: 8px;">
+            🌸 <b>套用完成後：</b><br>
+            點擊 iPad/iPhone 頂部或底部的 <b>「分享 ➔ 加到主畫面」</b>，即可將你剛剛設定好的名稱與精美莫蘭迪圖示直接存至桌面！
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-pwa" onclick="confirmPwaSetup()">套用圖示與規格 ✨</button>
+        </div>
+    </div>
+</div>
+
 <script>
     const PERIODS = ['1', '2', '3', '4', 'E', '5', '6', '7', '8', '9', 'A', 'B'];
     const DAYS = [1, 2, 3, 4, 5, 6, 7];
@@ -639,39 +661,39 @@
         { bg: '#C9BCB322', border: '#C9BCB3' }
     ];
 
-    /* ✨ 精繪 SVG 圖示 (完全比照照片細節：手繪日曆、圓形勾勾、網格課表、手寫鉛筆、莫蘭迪植物) */
+    /* ✨ 8 款精繪 SVG 圖示數據 (100% 純內建獨立離線載入) */
     const APP_ICONS = [
         { 
-            id: 'icon1', title: '排課表', sub: '簡單排課 · 清楚規劃', 
-            svg: `<svg viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="22" fill="#FAF8F5"/><rect x="25" y="28" width="50" height="46" rx="8" stroke="#5A524C" stroke-width="3.5" fill="white"/><line x1="35" y1="20" x2="35" y2="28" stroke="#5A524C" stroke-width="3.5" stroke-linecap="round"/><line x1="65" y1="20" x2="65" y2="28" stroke="#5A524C" stroke-width="3.5" stroke-linecap="round"/><rect x="31" y="36" width="10" height="10" rx="2" fill="#E8C59A"/><rect x="45" y="36" width="10" height="10" rx="2" fill="#93B497"/><rect x="59" y="36" width="10" height="10" rx="2" fill="#A0B2C6"/><rect x="31" y="50" width="10" height="10" rx="2" fill="#A0B2C6"/><rect x="45" y="50" width="10" height="10" rx="2" fill="#D97770"/><rect x="59" y="50" width="10" height="10" rx="2" fill="#E8C59A"/></svg>` 
+            id: 'icon1', title: '排課表', sub: '簡單排課 · 清楚規劃', bg: '#FAF8F5',
+            svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="22" fill="#FAF8F5"/><rect x="25" y="22" width="50" height="46" rx="8" stroke="#5A524C" stroke-width="3.5" fill="white"/><line x1="35" y1="14" x2="35" y2="22" stroke="#5A524C" stroke-width="3.5" stroke-linecap="round"/><line x1="65" y1="14" x2="65" y2="22" stroke="#5A524C" stroke-width="3.5" stroke-linecap="round"/><rect x="31" y="30" width="10" height="10" rx="2" fill="#E8C59A"/><rect x="45" y="30" width="10" height="10" rx="2" fill="#93B497"/><rect x="59" y="30" width="10" height="10" rx="2" fill="#A0B2C6"/><rect x="31" y="44" width="10" height="10" rx="2" fill="#A0B2C6"/><rect x="45" y="44" width="10" height="10" rx="2" fill="#D97770"/><rect x="59" y="44" width="10" height="10" rx="2" fill="#E8C59A"/><text x="50" y="82" font-size="10" font-weight="bold" fill="#5A524C" text-anchor="middle">排課表</text></svg>` 
         },
         { 
-            id: 'icon2', title: '排課表', sub: '簡單排課 · 清楚規劃', 
-            svg: `<svg viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="22" fill="#F4F7F4"/><rect x="25" y="26" width="50" height="46" rx="8" stroke="#3E4A3E" stroke-width="3.5" fill="white"/><path d="M35 18 V26 M65 18 V26" stroke="#3E4A3E" stroke-width="3.5" stroke-linecap="round"/><path d="M30 40 H70 M30 54 H70 M45 32 V66 M58 32 V66" stroke="#3E4A3E" stroke-width="2.5" stroke-linecap="round"/><path d="M68 62 C74 55 78 48 76 42 C70 48 64 56 68 62 Z" fill="#788C78"/><path d="M66 58 C72 52 74 46 72 42" stroke="#3E4A3E" stroke-width="2"/></svg>` 
+            id: 'icon2', title: '排課表', sub: '簡單排課 · 清楚規劃', bg: '#F4F7F4',
+            svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="22" fill="#F4F7F4"/><rect x="25" y="20" width="50" height="46" rx="8" stroke="#3E4A3E" stroke-width="3.5" fill="white"/><path d="M35 12 V20 M65 12 V20" stroke="#3E4A3E" stroke-width="3.5" stroke-linecap="round"/><path d="M30 34 H70 M30 48 H70 M45 26 V60 M58 26 V60" stroke="#3E4A3E" stroke-width="2.5" stroke-linecap="round"/><path d="M68 56 C74 49 78 42 76 36 C70 42 64 50 68 56 Z" fill="#788C78"/><path d="M66 52 C72 46 74 40 72 36" stroke="#3E4A3E" stroke-width="2"/><text x="50" y="82" font-size="10" font-weight="bold" fill="#3E4A3E" text-anchor="middle">排課表</text></svg>` 
         },
         { 
-            id: 'icon3', title: '排課表', sub: '我的課程，我做主', 
-            svg: `<svg viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="22" fill="#F4F6F9"/><rect x="25" y="26" width="50" height="46" rx="8" stroke="#3A4452" stroke-width="3.5" fill="white"/><path d="M35 18 V26 M65 18 V26" stroke="#3A4452" stroke-width="3.5" stroke-linecap="round"/><rect x="30" y="34" width="18" height="14" fill="#A0B2C6"/><rect x="52" y="34" width="18" height="14" fill="#FBC870"/><rect x="30" y="52" width="18" height="14" fill="#93B497"/></svg>` 
+            id: 'icon3', title: '排課表', sub: '我的課程，我做主', bg: '#F4F6F9',
+            svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="22" fill="#F4F6F9"/><rect x="25" y="22" width="50" height="46" rx="8" stroke="#3A4452" stroke-width="3.5" fill="white"/><path d="M35 14 V22 M65 14 V22" stroke="#3A4452" stroke-width="3.5" stroke-linecap="round"/><rect x="30" y="30" width="18" height="14" fill="#A0B2C6"/><rect x="52" y="30" width="18" height="14" fill="#FBC870"/><rect x="30" y="48" width="18" height="14" fill="#93B497"/><text x="50" y="82" font-size="10" font-weight="bold" fill="#3A4452" text-anchor="middle">排課表</text></svg>` 
         },
         { 
-            id: 'icon4', title: '排課表', sub: '輕鬆安排每一堂課', 
-            svg: `<svg viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="22" fill="#F7F5F9"/><rect x="25" y="28" width="50" height="46" rx="8" stroke="#443E52" stroke-width="3.5" fill="white"/><path d="M35 20 V28 M65 20 V28" stroke="#443E52" stroke-width="3.5" stroke-linecap="round"/><path d="M40 50 L48 58 L62 42" stroke="#443E52" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="72" cy="62" r="14" fill="#B2A4C7" opacity="0.45"/></svg>` 
+            id: 'icon4', title: '排課表', sub: '輕鬆安排每一堂課', bg: '#F7F5F9',
+            svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="22" fill="#F7F5F9"/><rect x="25" y="22" width="50" height="46" rx="8" stroke="#443E52" stroke-width="3.5" fill="white"/><path d="M35 14 V22 M65 14 V22" stroke="#443E52" stroke-width="3.5" stroke-linecap="round"/><path d="M40 44 L48 52 L62 36" stroke="#443E52" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="72" cy="56" r="14" fill="#B2A4C7" opacity="0.45"/><text x="50" y="82" font-size="10" font-weight="bold" fill="#443E52" text-anchor="middle">排課表</text></svg>` 
         },
         { 
-            id: 'icon5', title: '排課表', sub: '輕鬆安排每一堂課', 
-            svg: `<svg viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="22" fill="#F7F5F9"/><circle cx="50" cy="42" r="20" fill="#93B497" opacity="0.45"/><rect x="30" y="24" width="40" height="36" rx="6" stroke="#3E4A3E" stroke-width="3.5" fill="white"/><path d="M40 18 V24 M60 18 V24" stroke="#3E4A3E" stroke-width="3.5" stroke-linecap="round"/><path d="M42 42 L48 48 L58 36" stroke="#3E4A3E" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="62" y="52" width="8" height="8" stroke="#3E4A3E" stroke-width="2" fill="white"/></svg>` 
+            id: 'icon5', title: '排課表', sub: '輕鬆安排每一堂課', bg: '#F7F5F9',
+            svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="22" fill="#F7F5F9"/><circle cx="50" cy="36" r="18" fill="#93B497" opacity="0.45"/><rect x="30" y="20" width="40" height="36" rx="6" stroke="#3E4A3E" stroke-width="3.5" fill="white"/><path d="M40 14 V20 M60 14 V20" stroke="#3E4A3E" stroke-width="3.5" stroke-linecap="round"/><path d="M42 38 L48 44 L58 32" stroke="#3E4A3E" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="62" y="48" width="8" height="8" stroke="#3E4A3E" stroke-width="2" fill="white"/><text x="50" y="82" font-size="10" font-weight="bold" fill="#3E4A3E" text-anchor="middle">排課表</text></svg>` 
         },
         { 
-            id: 'icon6', title: '排課表', sub: '簡單排課 · 清楚生活', 
-            svg: `<svg viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="22" fill="#F9F5F5"/><circle cx="34" cy="34" r="14" fill="#FBC870" opacity="0.4"/><rect x="22" y="32" width="42" height="40" rx="6" stroke="#523E49" stroke-width="3.5" fill="white"/><path d="M32 26 V32 M54 26 V32" stroke="#523E49" stroke-width="3.5" stroke-linecap="round"/><rect x="28" y="40" width="8" height="8" fill="#D97770"/><rect x="38" y="40" width="8" height="8" fill="#E8C59A"/><rect x="48" y="40" width="8" height="8" fill="#A0B2C6"/><circle cx="68" cy="62" r="2" fill="#D97770"/><circle cx="74" cy="62" r="2" fill="#D97770"/><circle cx="68" cy="68" r="2" fill="#D97770"/><circle cx="74" cy="68" r="2" fill="#D97770"/></svg>` 
+            id: 'icon6', title: '排課表', sub: '簡單排課 · 清楚生活', bg: '#F9F5F5',
+            svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="22" fill="#F9F5F5"/><circle cx="34" cy="28" r="14" fill="#FBC870" opacity="0.4"/><rect x="22" y="26" width="42" height="40" rx="6" stroke="#523E49" stroke-width="3.5" fill="white"/><path d="M32 20 V26 M54 20 V26" stroke="#523E49" stroke-width="3.5" stroke-linecap="round"/><rect x="28" y="34" width="8" height="8" fill="#D97770"/><rect x="38" y="34" width="8" height="8" fill="#E8C59A"/><rect x="48" y="34" width="8" height="8" fill="#A0B2C6"/><circle cx="68" cy="56" r="2" fill="#D97770"/><circle cx="74" cy="56" r="2" fill="#D97770"/><circle cx="68" cy="62" r="2" fill="#D97770"/><circle cx="74" cy="62" r="2" fill="#D97770"/><text x="50" y="82" font-size="10" font-weight="bold" fill="#523E49" text-anchor="middle">排課表</text></svg>` 
         },
         { 
-            id: 'icon7', title: '排課表', sub: '規劃課程，規劃更好的自己', 
-            svg: `<svg viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="22" fill="#FAF8F5"/><circle cx="50" cy="50" r="20" fill="#FBC870" opacity="0.35"/><g transform="translate(0, -2)"><rect x="28" y="28" width="44" height="42" rx="6" stroke="#4A4238" stroke-width="3.5" fill="white"/><path d="M38 22 V28 M62 22 V28" stroke="#4A4238" stroke-width="3.5" stroke-linecap="round"/><rect x="34" y="36" width="10" height="10" fill="#FBC870"/><rect x="47" y="36" width="10" height="10" fill="#E8C59A"/><rect x="34" y="49" width="10" height="10" fill="#E8C59A"/></g></svg>` 
+            id: 'icon7', title: '排課表', sub: '規劃課程，規劃更好的自己', bg: '#FAF8F5',
+            svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="22" fill="#FAF8F5"/><circle cx="50" cy="44" r="20" fill="#FBC870" opacity="0.35"/><g transform="translate(0, -6)"><rect x="28" y="28" width="44" height="42" rx="6" stroke="#4A4238" stroke-width="3.5" fill="white"/><path d="M38 22 V28 M62 22 V28" stroke="#4A4238" stroke-width="3.5" stroke-linecap="round"/><rect x="34" y="36" width="10" height="10" fill="#FBC870"/><rect x="47" y="36" width="10" height="10" fill="#E8C59A"/><rect x="34" y="49" width="10" height="10" fill="#E8C59A"/></g><text x="50" y="82" font-size="10" font-weight="bold" fill="#4A4238" text-anchor="middle">排課表</text></svg>` 
         },
         { 
-            id: 'icon8', title: '排課表', sub: '我的課程，我安排', 
-            svg: `<svg viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="22" fill="#FAF8F5"/><circle cx="34" cy="34" r="14" fill="#E8C59A" opacity="0.4"/><rect x="25" y="28" width="46" height="44" rx="6" stroke="#4A4238" stroke-width="3.5" fill="white"/><path d="M35 22 V28 M61 22 V28" stroke="#4A4238" stroke-width="3.5" stroke-linecap="round"/><g transform="rotate(45, 65, 55)"><rect x="60" y="40" width="8" height="24" rx="2" stroke="#4A4238" stroke-width="3" fill="white"/><path d="M60 64 L64 72 L68 64 Z" fill="#4A4238"/></g></svg>` 
+            id: 'icon8', title: '排課表', sub: '我的課程，我安排', bg: '#FAF8F5',
+            svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="22" fill="#FAF8F5"/><circle cx="34" cy="28" r="14" fill="#E8C59A" opacity="0.4"/><rect x="25" y="22" width="46" height="44" rx="6" stroke="#4A4238" stroke-width="3.5" fill="white"/><path d="M35 16 V22 M61 16 V22" stroke="#4A4238" stroke-width="3.5" stroke-linecap="round"/><g transform="rotate(45, 65, 49)"><rect x="60" y="34" width="8" height="24" rx="2" stroke="#4A4238" stroke-width="3" fill="white"/><path d="M60 58 L64 66 L68 58 Z" fill="#4A4238"/></g><text x="50" y="82" font-size="10" font-weight="bold" fill="#4A4238" text-anchor="middle">排課表</text></svg>` 
         }
     ];
 
@@ -691,35 +713,30 @@
     let currentZoomIdx = 0;
     let expandedSemesterKey = null;
     let isCourseFormCollapsed = false;
-    let deferredPrompt = null; // 儲存 PWA 安裝 Event
-
-    /* 監聽 PWA 安裝事件 */
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-    });
 
     function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
-    function toggleAppearancePanel() { document.getElementById('appearancePanel').classList.toggle('active'); }
+    function toggleAppearancePanel() { 
+        document.getElementById('appearancePanel').classList.toggle('active'); 
+        renderAppIconGrid('appIconGrid');
+    }
     function closeModal(id) { 
         const el = document.getElementById(id);
         if(el) el.classList.remove('active'); 
     }
 
-    /* ✨ 點擊直接觸發 PWA 安裝 */
-    function triggerPwaInstall() {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            deferredPrompt.userChoice.then((choiceResult) => {
-                if (choiceResult.outcome === 'accepted') {
-                    console.log('使用者接受安裝 App');
-                }
-                deferredPrompt = null;
-            });
-        } else {
-            // iOS 或無原生 Prompt 時開啟選單
-            toggleAppearancePanel();
-        }
+    /* ✨ 打開專屬 PWA 儲存至主畫面 Modal */
+    function openPwaModal(e) {
+        if (e) e.stopPropagation();
+        renderAppIconGrid('pwaAppIconGrid');
+        const modal = document.getElementById('pwaModal');
+        if (modal) modal.classList.add('active');
+    }
+
+    function updatePwaTitle() {
+        const titleVal = document.getElementById('pwaAppNameInput').value.trim() || '排課表';
+        const metaTitle = document.getElementById('appMobileTitle');
+        if (metaTitle) metaTitle.content = titleVal;
+        localStorage.setItem('v3_pwa_custom_title', titleVal);
     }
 
     function toggleCourseFormCollapse() {
@@ -797,9 +814,28 @@
         });
     }
 
-    /* ✨ 渲染比照圖片繪製的 SVG App 圖示選單 */
-    function renderAppIconGrid() {
-        const container = document.getElementById('appIconGrid');
+    /* ✨ 用 Canvas 將選中的 SVG 轉成 iOS 支援的 180x180 高清 PNG Apple Touch Icon */
+    function generatePngAppleIcon(svgString, callback) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 180;
+        canvas.height = 180;
+        const ctx = canvas.getContext('2d');
+
+        const img = new Image();
+        const svgBlob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
+        const url = URL.createObjectURL(svgBlob);
+
+        img.onload = () => {
+            ctx.drawImage(img, 0, 0, 180, 180);
+            const pngDataUrl = canvas.toDataURL('image/png');
+            URL.revokeObjectURL(url);
+            if (callback) callback(pngDataUrl);
+        };
+        img.src = url;
+    }
+
+    function renderAppIconGrid(targetContainerId = 'pwaAppIconGrid') {
+        const container = document.getElementById(targetContainerId);
         if (!container) return;
         container.innerHTML = '';
 
@@ -813,7 +849,7 @@
             card.onclick = () => selectAppIcon(icon);
 
             card.innerHTML = `
-                <div class="app-icon-img">${icon.svg}</div>
+                <div class="app-icon-preview-box">${icon.svg}</div>
                 <div class="app-icon-title">${icon.title}</div>
                 <div class="app-icon-sub">${icon.sub}</div>
             `;
@@ -824,14 +860,19 @@
     function selectAppIcon(icon) {
         localStorage.setItem('v3_selected_app_icon', icon.id);
         
-        // 將 SVG 轉為 Data URI 設定為 apple-touch-icon
-        const svgBlob = new Blob([icon.svg], {type: 'image/svg+xml;charset=utf-8'});
-        const url = URL.createObjectURL(svgBlob);
-        
-        const linkEl = document.getElementById('dynamicAppleIcon');
-        if (linkEl) linkEl.href = url;
+        generatePngAppleIcon(icon.svg, (pngDataUrl) => {
+            const linkEl = document.getElementById('dynamicAppleIcon');
+            if (linkEl) linkEl.href = pngDataUrl;
+        });
 
-        renderAppIconGrid();
+        renderAppIconGrid('appIconGrid');
+        renderAppIconGrid('pwaAppIconGrid');
+    }
+
+    function confirmPwaSetup() {
+        updatePwaTitle();
+        closeModal('pwaModal');
+        alert('✨ 規格與圖示已成功套用！請點擊 iPad/iPhone 頂部或底部的「分享 ➔ 加到主畫面」即可存到桌面囉！');
     }
 
     function renderMainThemeOptions() {
@@ -1429,7 +1470,6 @@
         el.classList.add('selected');
     }
 
-    /* ✨ 截圖圖片標題（僅保留第一行自訂名稱大字，移除第二行） */
     function executeExport() {
         const customName = document.getElementById('exportScheduleName').value.trim() || '我的學期課表';
         closeModal('exportModal');
@@ -1471,7 +1511,6 @@
 
     window.onload = () => {
         initCardColorPicker();
-        renderAppIconGrid();
         
         ['v2_semesters_data', 'v2_pinned_semester', 'my_semesters_data', 'my_pinned_semester'].forEach(k => localStorage.removeItem(k));
 
@@ -1486,6 +1525,18 @@
             isCourseFormCollapsed = true;
             document.getElementById('courseFormBody').classList.add('collapsed');
             document.getElementById('courseFormToggleBtn').innerText = '展開 ▾';
+        }
+
+        /* 初始化預設圖示與 PWA Title */
+        const savedIconId = localStorage.getItem('v3_selected_app_icon') || 'icon1';
+        const initialIcon = APP_ICONS.find(i => i.id === savedIconId) || APP_ICONS[0];
+        selectAppIcon(initialIcon);
+
+        const savedPwaTitle = localStorage.getItem('v3_pwa_custom_title');
+        if (savedPwaTitle) {
+            const inputEl = document.getElementById('pwaAppNameInput');
+            if (inputEl) inputEl.value = savedPwaTitle;
+            updatePwaTitle();
         }
 
         const savedPinned = localStorage.getItem('v3_clean_pinned');
