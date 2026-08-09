@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>排課小助手 Pro</title>
+    
+    <!-- PWA Meta 設定 -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="排課表">
+    <link id="dynamicAppleIcon" rel="apple-touch-icon" href="">
+
+    <!-- 引入 Google Fonts 繁體中文全字庫無缺字字型 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&family=Yuji+Syuku&family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- 引入網頁截圖元件 (html2canvas) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        :root {
+            /* 經典莫蘭迪主題變數 */
+            --c-blue: #C6A675;
+            --c-green: #93B497;
+            --c-red: #D97770;
+            --c-yellow: #FBC870;
+            --c-submit: #C6A675;
+            --c-save: #7BB4A8;
+            --c-screenshot: #D9A86C; 
+            --c-pwa: #D8A7B1; /* 溫柔淺藕粉色 */
+            
+            --bg-color: #F7F5F0;
+            --card-bg: #EFECE6;
+            --panel-bg: #E7E3DA;
+            --border-color: #DDD8CD;
+            --grid-border: #E8E4DA;
+            --text-main: #4A4238;
+            --text-sub: #8C8275;
+            
+            --warning-bg: #DF777015;
+            --warning-border: #D97770;
+
+            --font-family-custom: 'Zen Maru Gothic', sans-serif;
+            --box-border-style: solid;
+            --box-border-radius: 12px;
+            --global-zoom: 1;
+        }
+
+        * { 
+            box-sizing: border-box; 
+            font-family: var(--font-family-custom), -apple-system, BlinkMacSystemFont, "PingFang TC", "Hiragino Sans GB", "Microsoft JhengHei", sans-serif; 
+        }
+
+        body { 
+            background-color: var(--bg-color); margin: 0; padding: 16px; color: var(--text-main); 
+            transition: background 0.3s;
+            zoom: var(--global-zoom);
+        }
+        
+        .container { max-width: 1200px; margin: 0 auto; }
+        .card { background: var(--card-bg); border-radius: var(--box-border-radius); padding: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 16px; border: 1px var(--box-border-style) var(--border-color); }
+
+        .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
+        
+        .btn { 
+            color: white; border: none; padding: 8px 14px; border-radius: 8px; 
+            font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn:disabled { background: #CBD5E1 !important; box-shadow: none; cursor: not-allowed; opacity: 0.6; }
+        
+        .btn-undo { background: var(--c-yellow); color: #4A3B10; } 
+        .btn-redo { background: #8C8275; } 
+        .btn-save { background: var(--c-save); color: #FFFFFF; } 
+        .btn-screenshot { background: var(--c-screenshot); color: #FFFFFF; } 
+        .btn-danger { background: var(--c-red); } 
+        .btn-submit { background: var(--c-submit); font-size: 0.95rem; padding: 10px; border-radius: 10px; color: #fff; }
+        .btn-appearance { background: #4A5B6E; color: #fff; }
+        .btn-sidebar { background: #8C8275; color: #fff; }
+        .btn-zoom { background: #6B7A82; color: #fff; }
+        
+        /* 淺藕粉色按鈕 */
+        .btn-pwa { background: var(--c-pwa); color: #5C3A44; }
+
+        /* 左側學期管理抽屜欄 */
+        .sidebar {
+            position: fixed; top: 0; left: -340px; width: 320px; height: 100%;
+            background: var(--card-bg); border-right: 2px solid var(--border-color);
+            box-shadow: 4px 0 15px rgba(0,0,0,0.1); z-index: 1000; transition: left 0.3s ease;
+            padding: 20px; display: flex; flex-direction: column; overflow-y: auto;
+        }
+        .sidebar.active { left: 0; }
+        .sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-weight: bold; font-size: 1.1rem; }
+        .semester-list { flex: 1; overflow-y: auto; }
+        
+        /* 手風琴學期卡片 */
+        .semester-card {
+            background: var(--panel-bg); border-radius: 10px; margin-bottom: 10px;
+            border: 2px solid transparent; transition: all 0.25s ease; overflow: hidden;
+            user-select: none;
+        }
+        .semester-card.active { border-color: var(--c-submit); }
+        .semester-card.pinned { border: 2px solid var(--c-yellow); }
+        
+        .semester-card-header {
+            padding: 12px; display: flex; justify-content: space-between; align-items: center;
+            font-weight: bold; font-size: 0.9rem; cursor: pointer;
+        }
+        
+        .move-btn-group { display: flex; gap: 2px; margin-left: 6px; }
+        .btn-move {
+            background: rgba(0,0,0,0.06); border: none; padding: 2px 6px; border-radius: 4px;
+            font-size: 0.68rem; cursor: pointer; color: var(--text-main); font-weight: bold;
+        }
+        .btn-move:hover { background: var(--c-submit); color: white; }
+
+        .semester-card-body {
+            padding: 12px; border-top: 1px dashed rgba(0,0,0,0.1);
+            display: none; transition: background 0.3s;
+        }
+        .semester-card.expanded .semester-card-body { display: block; }
+
+        /* 外觀設定控制面板區塊 */
+        .appearance-panel { display: none; margin-bottom: 16px; }
+        .appearance-panel.active { display: block; }
+        .setting-section { margin-bottom: 14px; }
+        .setting-title { font-size: 0.9rem; font-weight: bold; margin-bottom: 6px; color: var(--text-main); }
+        .option-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(85px, 1fr)); gap: 8px; }
+        .opt-card {
+            background: var(--panel-bg); border: 2px solid transparent;
+            border-radius: 8px; padding: 6px 4px; text-align: center; cursor: pointer; font-size: 0.78rem; font-weight: bold;
+        }
+        .opt-card.selected { border-color: var(--c-submit); background: var(--card-bg); }
+
+        /* 圖示選擇器 */
+        .app-icon-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 10px; margin-top: 8px; }
+        .app-icon-card {
+            background: var(--panel-bg); border: 2px solid transparent; border-radius: 12px;
+            padding: 10px 8px; text-align: center; cursor: pointer; transition: all 0.2s;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+        }
+        .app-icon-card.selected { border-color: var(--c-pwa); background: #FFF5F7; transform: scale(1.02); }
+        .app-icon-img { width: 68px; height: 68px; border-radius: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.06); }
+        .app-icon-title { font-size: 0.78rem; font-weight: bold; color: var(--text-main); margin-top: 2px; }
+        .app-icon-sub { font-size: 0.65rem; color: var(--text-sub); }
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(125px, 1fr)); gap: 10px; margin-bottom: 10px; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+        .form-group label { font-size: 0.8rem; font-weight: 700; color: var(--text-main); }
+        input, select, textarea { 
+            width: 100%; box-sizing: border-box;
+            padding: 7px 10px; border: 1.5px var(--box-border-style) var(--border-color); 
+            border-radius: 6px; font-size: 0.85rem; transition: border-color 0.2s; 
+            font-weight: 500; background: var(--bg-color); color: var(--text-main); 
+        }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--c-submit); }
+
+        .editable-app-title {
+            border: none; background: transparent; font-size: 1.3rem; font-weight: 700;
+            color: var(--text-main); padding: 2px 4px; border-radius: 6px; width: auto; max-width: 200px;
+        }
+        .editable-app-title:hover, .editable-app-title:focus { background: var(--panel-bg); outline: none; }
+
+        .color-picker { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+        .color-dot {
+            width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
+            border: 2px solid transparent; transition: transform 0.2s, border-color 0.2s;
+        }
+        .color-dot.selected { border-color: var(--text-main); transform: scale(1.15); }
+
+        .period-selector { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+        .period-tag { position: relative; }
+        .period-tag input { position: absolute; opacity: 0; cursor: pointer; }
+        .period-tag span { 
+            display: inline-block; padding: 6px 10px; background: var(--panel-bg); 
+            border: 1px var(--box-border-style) var(--border-color); border-radius: 6px; font-size: 0.8rem; 
+            font-weight: 700; cursor: pointer; transition: all 0.2s; color: var(--text-main);
+        }
+        .period-tag input:checked + span { 
+            background: var(--c-submit); color: white; border-color: transparent;
+            box-shadow: 0 2px 6px rgba(198, 166, 117, 0.3);
+        }
+
+        .collapsible-card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; user-select: none; padding-bottom: 6px;
+        }
+        .collapsible-card-title { font-size: 0.95rem; font-weight: bold; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
+        .collapsible-body { margin-top: 8px; }
+        .collapsible-body.collapsed { display: none; }
+
+        .table-wrapper { overflow-x: auto; border-radius: var(--box-border-radius); background: var(--card-bg); padding: 12px; }
+        
+        .screenshot-title-box {
+            display: none;
+            text-align: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 3px dashed var(--border-color);
+            width: 100%;
+        }
+        .screenshot-main-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: 1px;
+        }
+
+        table { width: 100%; border-collapse: collapse; text-align: center; font-size: 0.8rem; table-layout: fixed; }
+        th, td { border: 1px var(--box-border-style) var(--border-color); padding: 4px; width: 13%; height: 58px; vertical-align: top; }
+        th { background: var(--panel-bg); font-weight: 700; color: var(--text-main); padding: 6px; width: 13%; }
+        .period-header { width: 42px !important; min-width: 42px; background: var(--panel-bg); font-weight: bold; vertical-align: middle; color: var(--text-sub); }
+
+        .course-item { 
+            padding: 6px 7px; border-radius: 6px; margin-bottom: 4px; text-align: left; 
+            font-size: 0.72rem; box-shadow: 0 2px 4px rgba(0,0,0,0.03); color: var(--text-main);
+            border-left: 3.5px solid var(--c-blue); transition: all 0.2s; position: relative;
+            cursor: pointer; display: flex; flex-direction: column; justify-content: space-between;
+            width: 100%; word-break: break-all;
+        }
+        .course-header { 
+            display: flex !important; 
+            align-items: center !important; 
+            justify-content: space-between !important; 
+            gap: 6px; 
+            margin-bottom: 4px; 
+            width: 100%;
+        }
+        .course-title-wrap {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px;
+            flex: 1;
+        }
+        .course-title { 
+            font-weight: bold; 
+            font-size: 0.8rem; 
+            line-height: 1.2;
+        }
+        .course-checkbox { 
+            flex-shrink: 0;
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            cursor: pointer;
+        }
+        
+        .conflict-badge {
+            display: inline-block; background-color: var(--c-red); color: #FFFFFF !important;
+            font-size: 0.62rem; font-weight: bold; padding: 1px 4px; border-radius: 4px;
+        }
+
+        .badge { display: inline-block; padding: 1px 4px; border-radius: 3px; font-size: 0.62rem; font-weight: bold; background: rgba(255,255,255,0.75); margin-top: 2px; }
+
+        .stats-summary-bar {
+            display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+            background: var(--panel-bg); padding: 10px 14px; border-radius: 8px;
+            margin-top: 10px; font-size: 0.82rem; font-weight: bold; color: var(--text-main);
+            border: 1px var(--box-border-style) var(--border-color);
+        }
+        .stats-badge-group { display: flex; gap: 12px; flex-wrap: wrap; }
+        .stats-badge-item { display: flex; align-items: center; gap: 4px; }
+        .stats-highlight { color: var(--c-submit); font-size: 0.95rem; }
+
+        .conflict-card { background: var(--warning-bg); border: 1px var(--box-border-style) var(--warning-border); border-radius: var(--box-border-radius); padding: 14px; margin-top: 16px; }
+        .conflict-header { color: var(--c-red); font-weight: bold; font-size: 0.95rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+        .conflict-body { margin-top: 10px; display: block; }
+        .conflict-body.collapsed { display: none; }
+
+        .conflict-group { background: var(--card-bg); border: 1px var(--box-border-style) #FCA5A5; padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; }
+        .conflict-group-title { font-weight: bold; font-size: 0.85rem; color: var(--c-red); margin-bottom: 6px; border-bottom: 1px dashed #FCA5A5; padding-bottom: 4px; }
+        .conflict-row-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 0.8rem; }
+
+        /* Modal 彈出視窗 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.45); z-index: 9999; display: none;
+            justify-content: center; align-items: center; padding: 12px;
+            backdrop-filter: blur(2px);
+        }
+        .modal-overlay.active { display: flex !important; }
+        .modal-box {
+            background: var(--card-bg); border-radius: 12px; padding: 18px 20px;
+            width: 100%; max-width: 460px; box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+            border: 1px solid var(--border-color); max-height: 88vh; overflow-y: auto;
+            position: relative; z-index: 10000;
+        }
+        .modal-header { font-size: 1.05rem; font-weight: bold; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+    </style>
+</head>
+<body>
+
+<!-- 左側學期管理側邊欄 -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <span>學期管理選單</span>
+        <button class="btn" style="padding: 3px 8px; background: #CBD5E1; color: #333;" onclick="toggleSidebar()">✕</button>
+    </div>
+    
+    <div class="form-group" style="margin-bottom: 14px; width: 100%;">
+        <label>建立新學期</label>
+        <input type="text" id="newSemesterName" placeholder="例如: 114學年度第1學期">
+        <button class="btn btn-submit" style="margin-top: 6px; padding: 6px;" onclick="addSemester()">新增學期</button>
+    </div>
+
+    <div style="font-size: 0.75rem; color: var(--text-sub); margin-bottom: 8px; background: rgba(0,0,0,0.03); padding: 6px 8px; border-radius: 6px;">
+        💡 <b>提示：</b>未釘選學期按右側 ▲ ▼ 可調整順序；<b>快點兩下 (雙擊)</b> 卡片即可釘選置頂學期！
+    </div>
+
+    <div class="semester-list" id="semesterList" style="width: 100%;"></div>
+</div>
+
+<div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div style="display: flex; align-items: center; gap: 4px;">
+            <input type="text" id="mainAppNameInput" class="editable-app-title" value="排課小助手" onchange="saveAppNameChange()">
+            <span id="currentSemesterTitle" style="font-size: 0.9rem; opacity: 0.8;"></span>
+        </div>
+        <button class="btn btn-sidebar" onclick="toggleSidebar()">學期選單</button>
+    </div>
+
+    <div class="toolbar">
+        <button id="btnUndo" class="btn btn-undo" onclick="undo()" disabled>↩️ 上一步</button>
+        <button id="btnRedo" class="btn btn-redo" onclick="redo()" disabled>↪️ 下一步</button>
+        <button class="btn btn-save" onclick="saveToLocalStorage()">💾 儲存課表</button>
+        <button class="btn btn-screenshot" onclick="openExportModal(event)">📱 截圖並分享</button>
+        <!-- ✨ 淺藕粉色「📱 儲存至主畫面」按鈕 -->
+        <button class="btn btn-pwa" onclick="triggerPwaInstall()">📱 儲存至主畫面</button>
+        <button class="btn btn-danger" onclick="deleteSelectedCourses()">🗑️ 刪除所選課程</button>
+        <button class="btn btn-appearance" onclick="toggleAppearancePanel()">🎨 外觀設定</button>
+        <button class="btn btn-zoom" id="btnZoomToggle" onclick="cycleZoomScale()">🔍 縮放: 100%</button>
+    </div>
+
+    <!-- 外觀設定面板 -->
+    <div class="card appearance-panel" id="appearancePanel">
+        <div class="setting-section">
+            <div class="setting-title">🎨 全局背景 8 款主題風格</div>
+            <div class="option-cards" id="themeOptions"></div>
+        </div>
+
+        <div class="setting-section">
+            <div class="setting-title">✏️ 字體風格（繁體中文萬字庫支援）</div>
+            <div class="option-cards">
+                <div class="opt-card selected" onclick="setFontFamily('Zen Maru Gothic', this)">可愛圓體</div>
+                <div class="opt-card" onclick="setFontFamily('Yuji Syuku', this)">芫荽文青感 ✍️</div>
+                <div class="opt-card" onclick="setFontFamily('-apple-system, sans-serif', this)">標準系統字</div>
+                <div class="opt-card" onclick="setFontFamily('Noto Serif TC', this)">古典明體</div>
+            </div>
+        </div>
+
+        <!-- ✨ 莫蘭迪風格 APP 圖示選擇器 -->
+        <div class="setting-section">
+            <div class="setting-title">📱 APP 圖示樣式選擇</div>
+            <div class="app-icon-grid" id="appIconGrid"></div>
+        </div>
+    </div>
+
+    <!-- 課程輸入卡片 (支援摺疊/展開狀態記憶) -->
+    <div class="card">
+        <div class="collapsible-card-header" onclick="toggleCourseFormCollapse()">
+            <span class="collapsible-card-title">➕ 排入新課程設定</span>
+            <span id="courseFormToggleBtn" style="font-size: 0.8rem; font-weight: bold; color: var(--c-submit);">收起 ▴</span>
+        </div>
+
+        <div class="collapsible-body" id="courseFormBody">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="cName">課程名稱 *</label>
+                    <input type="text" id="cName" required placeholder="例：普通心理學">
+                </div>
+                <div class="form-group">
+                    <label for="cCredits">學分數</label>
+                    <input type="number" id="cCredits" min="0" max="10" placeholder="預設依節數帶入">
+                </div>
+                <div class="form-group">
+                    <label for="cType">修別屬性</label>
+                    <select id="cType">
+                        <option value="必修">必修</option>
+                        <option value="選修">選修</option>
+                        <option value="通識">通識</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="cCode">課程代碼</label>
+                    <input type="text" id="cCode" placeholder="例：PSY101 (選填)">
+                </div>
+                <div class="form-group">
+                    <label for="cTeacher">教師姓名</label>
+                    <input type="text" id="cTeacher" placeholder="例：張教授 (選填)">
+                </div>
+                <div class="form-group">
+                    <label for="cRoom">上課教室</label>
+                    <input type="text" id="cRoom" placeholder="例：綜 302 (選填)">
+                </div>
+                <div class="form-group">
+                    <label for="cDay">星期 *</label>
+                    <select id="cDay">
+                        <option value="1">星期一</option>
+                        <option value="2">星期二</option>
+                        <option value="3">星期三</option>
+                        <option value="4">星期四</option>
+                        <option value="5">星期五</option>
+                        <option value="6">星期六</option>
+                        <option value="7">星期日</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="cWeekType">單雙週備註</label>
+                    <select id="cWeekType">
+                        <option value="全週">每週 (全週)</option>
+                        <option value="單週">單週</option>
+                        <option value="雙週">雙週</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="cBorderStyle">卡片邊框外觀</label>
+                    <select id="cBorderStyle">
+                        <option value="solid">圓角實線 (預設)</option>
+                        <option value="double">經典雙線</option>
+                        <option value="dashed">虛線邊框</option>
+                        <option value="none">極簡無框</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 10px;">
+                <label>本課色彩色盤</label>
+                <div class="color-picker" id="cardColorPicker"></div>
+            </div>
+
+            <div class="form-group">
+                <label>上課節次（可複選）*</label>
+                <div class="period-selector">
+                    <label class="period-tag"><input type="checkbox" name="periods" value="1"><span>1</span></label>
+                    <label class="period-tag"><input type="checkbox" name="periods" value="2"><span>2</span></label>
+                    <label class="period-tag"><input type="checkbox" name="periods" value="3"><span>3</span></label>
+                    <label class="period-tag"><input type="checkbox" name="periods" value="4"><span>4</span></label>
+                    <label class="period-tag"><input type="checkbox" name="periods" value="E"><span>E</span></label>
+                    <label class="period-tag"><input type="checkbox" name="periods" value="5"><span>5</span></label>
+                    <label class="period-tag"><input type="checkbox" name="periods" value="6"><span>6</span></label>
+                    <label class="period-tag"><input type="checkbox" name="periods" value="7"><span>7</span></label>
+                    <label class="period-tag"><input type="checkbox" name="periods" value="8"><span>8</span></label>
+                    <label class="period-tag"><input type="checkbox" name="periods" value="9"><span>9</span></label>
+                    <label class="period-tag"><input type="checkbox" name="periods" value="A"><span>A</span></label>
+                    <label class="period-tag"><input type="checkbox" name="periods" value="B"><span>B</span></label>
+                </div>
+            </div>
+
+            <button type="button" class="btn btn-submit" onclick="handleAddCourse()" style="margin-top: 12px; width: 100%;">➕ 送出並排入課表</button>
+        </div>
+    </div>
+
+    <!-- 課表區域 -->
+    <div class="card table-wrapper" id="scheduleTableCard">
+        <!-- 截圖專用頂部標題（純淨大字居中，無第二行字幕） -->
+        <div id="screenshotTitleBox" class="screenshot-title-box">
+            <div id="screenshotMainTitle" class="screenshot-main-title">我的學期課表</div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th class="period-header">節次</th>
+                    <th>星期一</th><th>星期二</th><th>星期三</th><th>星期四</th><th>星期五</th><th>星期六</th><th>星期日</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td class="period-header">1</td><td id="cell-1-1"></td><td id="cell-2-1"></td><td id="cell-3-1"></td><td id="cell-4-1"></td><td id="cell-5-1"></td><td id="cell-6-1"></td><td id="cell-7-1"></td></tr>
+                <tr><td class="period-header">2</td><td id="cell-1-2"></td><td id="cell-2-2"></td><td id="cell-3-2"></td><td id="cell-4-2"></td><td id="cell-5-2"></td><td id="cell-6-2"></td><td id="cell-7-2"></td></tr>
+                <tr><td class="period-header">3</td><td id="cell-1-3"></td><td id="cell-2-3"></td><td id="cell-3-3"></td><td id="cell-4-3"></td><td id="cell-5-3"></td><td id="cell-6-3"></td><td id="cell-7-3"></td></tr>
+                <tr><td class="period-header">4</td><td id="cell-1-4"></td><td id="cell-2-4"></td><td id="cell-3-4"></td><td id="cell-4-4"></td><td id="cell-5-4"></td><td id="cell-6-4"></td><td id="cell-7-4"></td></tr>
+                <tr><td class="period-header">E</td><td id="cell-1-E"></td><td id="cell-2-E"></td><td id="cell-3-E"></td><td id="cell-4-E"></td><td id="cell-5-E"></td><td id="cell-6-E"></td><td id="cell-7-E"></td></tr>
+                <tr><td class="period-header">5</td><td id="cell-1-5"></td><td id="cell-2-5"></td><td id="cell-3-5"></td><td id="cell-4-5"></td><td id="cell-5-5"></td><td id="cell-6-5"></td><td id="cell-7-5"></td></tr>
+                <tr><td class="period-header">6</td><td id="cell-1-6"></td><td id="cell-2-6"></td><td id="cell-3-6"></td><td id="cell-4-6"></td><td id="cell-5-6"></td><td id="cell-6-6"></td><td id="cell-7-6"></td></tr>
+                <tr><td class="period-header">7</td><td id="cell-1-7"></td><td id="cell-2-7"></td><td id="cell-3-7"></td><td id="cell-4-7"></td><td id="cell-5-7"></td><td id="cell-6-7"></td><td id="cell-7-7"></td></tr>
+                <tr><td class="period-header">8</td><td id="cell-1-8"></td><td id="cell-2-8"></td><td id="cell-3-8"></td><td id="cell-4-8"></td><td id="cell-5-8"></td><td id="cell-6-8"></td><td id="cell-7-8"></td></tr>
+                <tr><td class="period-header">9</td><td id="cell-1-9"></td><td id="cell-2-9"></td><td id="cell-3-9"></td><td id="cell-4-9"></td><td id="cell-5-9"></td><td id="cell-6-9"></td><td id="cell-7-9"></td></tr>
+                <tr><td class="period-header">A</td><td id="cell-1-A"></td><td id="cell-2-A"></td><td id="cell-3-A"></td><td id="cell-4-A"></td><td id="cell-5-A"></td><td id="cell-6-A"></td><td id="cell-7-A"></td></tr>
+                <tr><td class="period-header">B</td><td id="cell-1-B"></td><td id="cell-2-B"></td><td id="cell-3-B"></td><td id="cell-4-B"></td><td id="cell-5-B"></td><td id="cell-6-B"></td><td id="cell-7-B"></td></tr>
+            </tbody>
+        </table>
+
+        <!-- 統計列 -->
+        <div class="stats-summary-bar">
+            <span>📊 本學期修課統計：</span>
+            <div class="stats-badge-group">
+                <div class="stats-badge-item">總節數: <span class="stats-highlight" id="statTotalPeriods">0</span> 節</div>
+                <div class="stats-badge-item">總學分: <span class="stats-highlight" id="statTotalCredits">0</span> 學分</div>
+                <div class="stats-badge-item">(<span id="statRequiredCredits">必修 0</span> | <span id="statElectiveCredits">選修 0</span> | <span id="statGeneralCredits">通識 0</span>)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 衝堂警示區塊 -->
+    <div class="conflict-card" id="conflictBox" style="display: none;">
+        <div class="conflict-header" onclick="toggleConflictBody()">
+            <span>⚠️ 衝堂提示專區</span>
+            <span id="conflictToggleBtn" style="font-size: 0.8rem; font-weight: normal;">收起 ▴</span>
+        </div>
+        <div class="conflict-body" id="conflictBody">
+            <div id="conflictList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 🔍 課程編輯 Modal -->
+<div class="modal-overlay" id="detailModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span>✏️ 編輯課程詳情</span>
+            <button class="btn" style="padding:2px 8px; background:#CBD5E1; color:#333;" onclick="closeModal('detailModal')">✕</button>
+        </div>
+        
+        <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div class="form-group">
+                <label>課程名稱 *</label>
+                <input type="text" id="editName">
+            </div>
+            <div class="form-group">
+                <label>上課教室</label>
+                <input type="text" id="editRoom">
+            </div>
+            <div class="form-group">
+                <label>學分數</label>
+                <input type="number" id="editCredits" min="0" max="10">
+            </div>
+            <div class="form-group">
+                <label>修別屬性</label>
+                <select id="editType">
+                    <option value="必修">必修</option>
+                    <option value="選修">選修</option>
+                    <option value="通識">通識</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>課程代碼</label>
+                <input type="text" id="editCode">
+            </div>
+            <div class="form-group">
+                <label>教師姓名</label>
+                <input type="text" id="editTeacher">
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+                <label>卡片邊框外觀</label>
+                <select id="editBorderStyle">
+                    <option value="solid">圓角實線 (預設)</option>
+                    <option value="double">經典雙線</option>
+                    <option value="dashed">虛線邊框</option>
+                    <option value="none">極簡無框</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 8px;">
+            <label>卡片外觀色彩</label>
+            <div class="color-picker" id="editCardColorPicker"></div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:8px;">
+            <label>🔗 課程網址大綱</label>
+            <div style="display:flex; gap:6px;">
+                <input type="url" id="detailUrl" placeholder="https://example.com/course">
+                <button class="btn btn-save" style="padding:4px 10px; font-size:0.8rem;" onclick="openCourseUrl()">開啟 🔗</button>
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:8px;">
+            <label>📝 補充資訊 / 備註</label>
+            <textarea id="detailNotes" rows="2" placeholder="例如：期中考佔 30%、每週報告"></textarea>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-save" onclick="saveCourseDetails()">儲存修改 ✨</button>
+        </div>
+    </div>
+</div>
+
+<!-- 📱 截圖尺寸與名稱詢問 Modal -->
+<div class="modal-overlay" id="exportModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span>📱 選擇截圖匯出設定</span>
+            <button class="btn" style="padding:2px 8px; background:#CBD5E1; color:#333;" onclick="closeModal('exportModal')">✕</button>
+        </div>
+        
+        <div class="form-group" style="margin-bottom:14px;">
+            <label style="font-size:0.85rem; font-weight:bold; color:var(--c-submit);">請問這張課表截圖要取什麼名字？ *</label>
+            <input type="text" id="exportScheduleName" placeholder="例如: 大三上學期課表" style="padding:8px 10px; font-size:0.9rem;">
+        </div>
+
+        <div class="setting-section">
+            <div class="setting-title">選擇螢幕尺寸比例</div>
+            <div class="option-cards" style="grid-template-columns: 1fr; gap: 6px;">
+                <div class="opt-card selected" onclick="selectExportSize('iphone', this)">📱 iPhone 常用畫面比例 (9:16)</div>
+                <div class="opt-card" onclick="selectExportSize('ipad', this)">平板 iPad 常用畫面比例 (4:3)</div>
+                <div class="opt-card" onclick="selectExportSize('default', this)">🖼️ 原尺寸滿版（無邊框拉伸）</div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-screenshot" onclick="executeExport()">開始繪製並下載 📸</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const PERIODS = ['1', '2', '3', '4', 'E', '5', '6', '7', '8', '9', 'A', 'B'];
+    const DAYS = [1, 2, 3, 4, 5, 6, 7];
+
+    const THEMES = {
+        oat: { name: '燕麥棕', bg: '#F7F5F0', card: '#EFECE6', panel: '#E7E3DA', primary: '#C6A675', text: '#4A4238', sub: '#8C8275', border: '#DDD8CD', grid: '#E8E4DA' },
+        cream: { name: '奶油米', bg: '#FAF8F5', card: '#F2EFE9', panel: '#EAE6DF', primary: '#D0A3A4', text: '#4A4238', sub: '#8C8275', border: '#E4DFD7', grid: '#EFECE6' },
+        sage: { name: '鼠尾草', bg: '#F4F7F4', card: '#E8EFE8', panel: '#DFE8DF', primary: '#93B497', text: '#3E4A3E', sub: '#788C78', border: '#CFDBCF', grid: '#E2EAE2' },
+        haze: { name: '霧霾藍', bg: '#F4F6F9', card: '#E8ECF2', panel: '#DFE4ED', primary: '#A0B2C6', text: '#3A4452', sub: '#76869B', border: '#D2DCE6', grid: '#DFE4ED' },
+        rose: { name: '乾燥玫瑰', bg: '#F9F5F5', card: '#F2E8E8', panel: '#EADCDC', primary: '#CBB0C4', text: '#523E49', sub: '#9B788B', border: '#E0CCCC', grid: '#EBE0E0' },
+        lavender: { name: '薰衣草', bg: '#F7F5F9', card: '#EFE8F2', panel: '#E6DCEB', primary: '#B2A4C7', text: '#443E52', sub: '#83789B', border: '#DCD0E6', grid: '#E8E0EE' },
+        matcha: { name: '抹茶拿鐵', bg: '#F2F5ED', card: '#E5EBE0', panel: '#D8E2D2', primary: '#7C906B', text: '#36402C', sub: '#68755A', border: '#C6D4BD', grid: '#DCE6D2' },
+        mint: { name: '薄荷汽水', bg: '#EDF5F5', card: '#E0EBEB', panel: '#D0E0E0', primary: '#69A3A3', text: '#2C3E3E', sub: '#5A7A7A', border: '#BDD4D4', grid: '#D2E2E2' }
+    };
+
+    const CARD_COLORS = [
+        { bg: '#C6A67522', border: '#C6A675' },
+        { bg: '#93B49733', border: '#93B497' },
+        { bg: '#D9777025', border: '#D97770' },
+        { bg: '#FBC87035', border: '#D9A136' },
+        { bg: '#B2A4C722', border: '#B2A4C7' },
+        { bg: '#A0B2C622', border: '#A0B2C6' },
+        { bg: '#E2B9B322', border: '#E2B9B3' },
+        { bg: '#B5C99A22', border: '#B5C99A' },
+        { bg: '#D4C39D22', border: '#D4C39D' },
+        { bg: '#C9BCB322', border: '#C9BCB3' }
+    ];
+
+    /* ✨ 精繪 SVG 圖示 (完全比照照片細節：手繪日曆、圓形勾勾、網格課表、手寫鉛筆、莫蘭迪植物) */
+    const APP_ICONS = [
+        { 
+            id: 'icon1', title: '排課表', sub: '簡單排課 · 清楚規劃', 
+            svg: `<svg viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="22" fill="#FAF8F5"/><rect x="25" y="28" width="50" height="46" rx="8" stroke="#5A524C" stroke-width="3.5" fill="white"/><line x1="35" y1="20" x2="35" y2="28" stroke="#5A524C" stroke-width="3.5" stroke-linecap="round"/><line x1="65" y1="20" x2="65" y2="28" stroke="#5A524C" stroke-width="3.5" stroke-linecap="round"/><rect x="31" y="36" width="10" height="10" rx="2" fill="#E8C59A"/><rect x="45" y="36" width="10" height="10" rx="2" fill="#93B497"/><rect x="59" y="36" width="10" height="10" rx="2" fill="#A0B2C6"/><rect x="31" y="50" width="10" height="10" rx="2" fill="#A0B2C6"/><rect x="45" y="50" width="10" height="10" rx="2" fill="#D97770"/><rect x="59" y="50" width="10" height="10" rx="2" fill="#E8C59A"/></svg>` 
+        },
+        { 
+            id: 'icon2', title: '排課表', sub: '簡單排課 · 清楚規劃', 
+            svg: `<svg viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="22" fill="#F4F7F4"/><rect x="25" y="26" width="50" height="46" rx="8" stroke="#3E4A3E" stroke-width="3.5" fill="white"/><path d="M35 18 V26 M65 18 V26" stroke="#3E4A3E" stroke-width="3.5" stroke-linecap="round"/><path d="M30 40 H70 M30 54 H70 M45 32 V66 M58 32 V66" stroke="#3E4A3E" stroke-width="2.5" stroke-linecap="round"/><path d="M68 62 C74 55 78 48 76 42 C70 48 64 56 68 62 Z" fill="#788C78"/><path d="M66 58 C72 52 74 46 72 42" stroke="#3E4A3E" stroke-width="2"/></svg>` 
+        },
+        { 
+            id: 'icon3', title: '排課表', sub: '我的課程，我做主', 
+            svg: `<svg viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="22" fill="#F4F6F9"/><rect x="25" y="26" width="50" height="46" rx="8" stroke="#3A4452" stroke-width="3.5" fill="white"/><path d="M35 18 V26 M65 18 V26" stroke="#3A4452" stroke-width="3.5" stroke-linecap="round"/><rect x="30" y="34" width="18" height="14" fill="#A0B2C6"/><rect x="52" y="34" width="18" height="14" fill="#FBC870"/><rect x="30" y="52" width="18" height="14" fill="#93B497"/></svg>` 
+        },
+        { 
+            id: 'icon4', title: '排課表', sub: '輕鬆安排每一堂課', 
+            svg: `<svg viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="22" fill="#F7F5F9"/><rect x="25" y="28" width="50" height="46" rx="8" stroke="#443E52" stroke-width="3.5" fill="white"/><path d="M35 20 V28 M65 20 V28" stroke="#443E52" stroke-width="3.5" stroke-linecap="round"/><path d="M40 50 L48 58 L62 42" stroke="#443E52" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="72" cy="62" r="14" fill="#B2A4C7" opacity="0.45"/></svg>` 
+        },
+        { 
+            id: 'icon5', title: '排課表', sub: '輕鬆安排每一堂課', 
+            svg: `<svg viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="22" fill="#F7F5F9"/><circle cx="50" cy="42" r="20" fill="#93B497" opacity="0.45"/><rect x="30" y="24" width="40" height="36" rx="6" stroke="#3E4A3E" stroke-width="3.5" fill="white"/><path d="M40 18 V24 M60 18 V24" stroke="#3E4A3E" stroke-width="3.5" stroke-linecap="round"/><path d="M42 42 L48 48 L58 36" stroke="#3E4A3E" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="62" y="52" width="8" height="8" stroke="#3E4A3E" stroke-width="2" fill="white"/></svg>` 
+        },
+        { 
+            id: 'icon6', title: '排課表', sub: '簡單排課 · 清楚生活', 
+            svg: `<svg viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="22" fill="#F9F5F5"/><circle cx="34" cy="34" r="14" fill="#FBC870" opacity="0.4"/><rect x="22" y="32" width="42" height="40" rx="6" stroke="#523E49" stroke-width="3.5" fill="white"/><path d="M32 26 V32 M54 26 V32" stroke="#523E49" stroke-width="3.5" stroke-linecap="round"/><rect x="28" y="40" width="8" height="8" fill="#D97770"/><rect x="38" y="40" width="8" height="8" fill="#E8C59A"/><rect x="48" y="40" width="8" height="8" fill="#A0B2C6"/><circle cx="68" cy="62" r="2" fill="#D97770"/><circle cx="74" cy="62" r="2" fill="#D97770"/><circle cx="68" cy="68" r="2" fill="#D97770"/><circle cx="74" cy="68" r="2" fill="#D97770"/></svg>` 
+        },
+        { 
+            id: 'icon7', title: '排課表', sub: '規劃課程，規劃更好的自己', 
+            svg: `<svg viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="22" fill="#FAF8F5"/><circle cx="50" cy="50" r="20" fill="#FBC870" opacity="0.35"/><g transform="translate(0, -2)"><rect x="28" y="28" width="44" height="42" rx="6" stroke="#4A4238" stroke-width="3.5" fill="white"/><path d="M38 22 V28 M62 22 V28" stroke="#4A4238" stroke-width="3.5" stroke-linecap="round"/><rect x="34" y="36" width="10" height="10" fill="#FBC870"/><rect x="47" y="36" width="10" height="10" fill="#E8C59A"/><rect x="34" y="49" width="10" height="10" fill="#E8C59A"/></g></svg>` 
+        },
+        { 
+            id: 'icon8', title: '排課表', sub: '我的課程，我安排', 
+            svg: `<svg viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="22" fill="#FAF8F5"/><circle cx="34" cy="34" r="14" fill="#E8C59A" opacity="0.4"/><rect x="25" y="28" width="46" height="44" rx="6" stroke="#4A4238" stroke-width="3.5" fill="white"/><path d="M35 22 V28 M61 22 V28" stroke="#4A4238" stroke-width="3.5" stroke-linecap="round"/><g transform="rotate(45, 65, 55)"><rect x="60" y="40" width="8" height="24" rx="2" stroke="#4A4238" stroke-width="3" fill="white"/><path d="M60 64 L64 72 L68 64 Z" fill="#4A4238"/></g></svg>` 
+        }
+    ];
+
+    let semesters = {};
+    let currentSemesterKey = '';
+    let pinnedSemesterKey = null;
+    let courses = [];
+    let history = [];
+    let historyIndex = -1;
+    let selectedCourseCodes = new Set();
+    let currentDetailCourseId = null;
+    let selectedExportRatio = 'iphone';
+    let selectedCustomColor = CARD_COLORS[0];
+    let editCustomColor = CARD_COLORS[0];
+    let appTitleName = '排課小助手';
+    let zoomScales = [1, 0.85, 0.75, 0.5];
+    let currentZoomIdx = 0;
+    let expandedSemesterKey = null;
+    let isCourseFormCollapsed = false;
+    let deferredPrompt = null; // 儲存 PWA 安裝 Event
+
+    /* 監聽 PWA 安裝事件 */
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+    });
+
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
+    function toggleAppearancePanel() { document.getElementById('appearancePanel').classList.toggle('active'); }
+    function closeModal(id) { 
+        const el = document.getElementById(id);
+        if(el) el.classList.remove('active'); 
+    }
+
+    /* ✨ 點擊直接觸發 PWA 安裝 */
+    function triggerPwaInstall() {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('使用者接受安裝 App');
+                }
+                deferredPrompt = null;
+            });
+        } else {
+            // iOS 或無原生 Prompt 時開啟選單
+            toggleAppearancePanel();
+        }
+    }
+
+    function toggleCourseFormCollapse() {
+        const body = document.getElementById('courseFormBody');
+        const btn = document.getElementById('courseFormToggleBtn');
+        isCourseFormCollapsed = !isCourseFormCollapsed;
+
+        if (isCourseFormCollapsed) {
+            body.classList.add('collapsed');
+            btn.innerText = '展開 ▾';
+        } else {
+            body.classList.remove('collapsed');
+            btn.innerText = '收起 ▴';
+        }
+
+        localStorage.setItem('v3_course_form_collapsed', isCourseFormCollapsed ? 'true' : 'false');
+    }
+
+    function cycleZoomScale() {
+        currentZoomIdx = (currentZoomIdx + 1) % zoomScales.length;
+        const scale = zoomScales[currentZoomIdx];
+        document.documentElement.style.setProperty('--global-zoom', scale);
+        document.getElementById('btnZoomToggle').innerText = `🔍 縮放: ${Math.round(scale * 100)}%`;
+    }
+
+    function toggleConflictBody() {
+        const body = document.getElementById('conflictBody');
+        const btn = document.getElementById('conflictToggleBtn');
+        if (body.classList.contains('collapsed')) {
+            body.classList.remove('collapsed');
+            btn.innerText = '收起 ▴';
+        } else {
+            body.classList.add('collapsed');
+            btn.innerText = '展開 ▾';
+        }
+    }
+
+    function saveAppNameChange() {
+        appTitleName = document.getElementById('mainAppNameInput').value.trim() || '排課小助手';
+        localStorage.setItem('my_app_title_name', appTitleName);
+    }
+
+    function initCardColorPicker() {
+        const container = document.getElementById('cardColorPicker');
+        container.innerHTML = '';
+        CARD_COLORS.forEach((color, idx) => {
+            const dot = document.createElement('div');
+            dot.className = `color-dot ${idx === 0 ? 'selected' : ''}`;
+            dot.style.backgroundColor = color.border;
+            dot.onclick = () => {
+                container.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
+                dot.classList.add('selected');
+                selectedCustomColor = color;
+            };
+            container.appendChild(dot);
+        });
+    }
+
+    function initEditCardColorPicker(selectedColorObj) {
+        const container = document.getElementById('editCardColorPicker');
+        container.innerHTML = '';
+        editCustomColor = selectedColorObj || CARD_COLORS[0];
+
+        CARD_COLORS.forEach(color => {
+            const dot = document.createElement('div');
+            const isMatch = color.border === editCustomColor.border;
+            dot.className = `color-dot ${isMatch ? 'selected' : ''}`;
+            dot.style.backgroundColor = color.border;
+            dot.onclick = () => {
+                container.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
+                dot.classList.add('selected');
+                editCustomColor = color;
+            };
+            container.appendChild(dot);
+        });
+    }
+
+    /* ✨ 渲染比照圖片繪製的 SVG App 圖示選單 */
+    function renderAppIconGrid() {
+        const container = document.getElementById('appIconGrid');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const savedIconId = localStorage.getItem('v3_selected_app_icon') || 'icon1';
+
+        APP_ICONS.forEach(icon => {
+            const isSelected = icon.id === savedIconId;
+
+            const card = document.createElement('div');
+            card.className = `app-icon-card ${isSelected ? 'selected' : ''}`;
+            card.onclick = () => selectAppIcon(icon);
+
+            card.innerHTML = `
+                <div class="app-icon-img">${icon.svg}</div>
+                <div class="app-icon-title">${icon.title}</div>
+                <div class="app-icon-sub">${icon.sub}</div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function selectAppIcon(icon) {
+        localStorage.setItem('v3_selected_app_icon', icon.id);
+        
+        // 將 SVG 轉為 Data URI 設定為 apple-touch-icon
+        const svgBlob = new Blob([icon.svg], {type: 'image/svg+xml;charset=utf-8'});
+        const url = URL.createObjectURL(svgBlob);
+        
+        const linkEl = document.getElementById('dynamicAppleIcon');
+        if (linkEl) linkEl.href = url;
+
+        renderAppIconGrid();
+    }
+
+    function renderMainThemeOptions() {
+        const container = document.getElementById('themeOptions');
+        container.innerHTML = '';
+        Object.keys(THEMES).forEach(key => {
+            const t = THEMES[key];
+            const card = document.createElement('div');
+            card.className = `opt-card ${key === (semesters[currentSemesterKey]?.theme || 'oat') ? 'selected' : ''}`;
+            card.innerText = t.name;
+            card.onclick = () => {
+                setSemesterTheme(key);
+                renderMainThemeOptions();
+            };
+            container.appendChild(card);
+        });
+    }
+
+    function saveToLocalStorageSilent() {
+        localStorage.setItem('v3_clean_semesters', JSON.stringify(semesters));
+        if (pinnedSemesterKey) {
+            localStorage.setItem('v3_clean_pinned', pinnedSemesterKey);
+        } else {
+            localStorage.removeItem('v3_clean_pinned');
+        }
+    }
+
+    function togglePinSemester(semKey) {
+        if (pinnedSemesterKey === semKey) {
+            pinnedSemesterKey = null;
+        } else {
+            pinnedSemesterKey = semKey;
+            
+            const newSemesters = {};
+            newSemesters[semKey] = semesters[semKey];
+            Object.keys(semesters).forEach(k => {
+                if (k !== semKey) newSemesters[k] = semesters[k];
+            });
+            semesters = newSemesters;
+        }
+        saveToLocalStorageSilent();
+        renderSemesters();
+    }
+
+    function moveSemesterIndex(semKey, direction, event) {
+        event.stopPropagation();
+        if (semKey === pinnedSemesterKey) return;
+
+        const keys = Object.keys(semesters);
+        const idx = keys.indexOf(semKey);
+        if (idx === -1) return;
+
+        const newIdx = idx + direction;
+        const minIndex = (pinnedSemesterKey && semesters[pinnedSemesterKey]) ? 1 : 0;
+        if (newIdx < minIndex || newIdx >= keys.length) return;
+
+        const targetKey = keys[newIdx];
+        keys[idx] = targetKey;
+        keys[newIdx] = semKey;
+
+        const newSemesters = {};
+        keys.forEach(k => {
+            newSemesters[k] = semesters[k];
+        });
+
+        semesters = newSemesters;
+        renderSemesters();
+        saveToLocalStorageSilent();
+    }
+
+    function renderSemesters() {
+        const container = document.getElementById('semesterList');
+        container.innerHTML = '';
+        
+        const keys = Object.keys(semesters);
+        
+        if (keys.length === 0) {
+            container.innerHTML = `<div style="text-align:center; padding: 20px; font-size:0.85rem; color:var(--text-sub);">目前還沒有任何學期課表唷！<br>請在上方建立第一個學期～</div>`;
+            document.getElementById('currentSemesterTitle').innerText = '';
+            return;
+        }
+
+        const minMoveIndex = (pinnedSemesterKey && semesters[pinnedSemesterKey]) ? 1 : 0;
+
+        keys.forEach((key, index) => {
+            const isCurrent = (key === currentSemesterKey);
+            const isPinned = (key === pinnedSemesterKey);
+            const isExpanded = (key === expandedSemesterKey);
+            const currentThemeKey = semesters[key]?.theme || 'oat';
+            const themeObj = THEMES[currentThemeKey] || THEMES['oat'];
+
+            const card = document.createElement('div');
+            card.className = `semester-card ${isCurrent ? 'active' : ''} ${isPinned ? 'pinned' : ''} ${isExpanded ? 'expanded' : ''}`;
+
+            card.ondblclick = () => togglePinSemester(key);
+
+            let themeButtonsHTML = '';
+            Object.keys(THEMES).forEach(tKey => {
+                themeButtonsHTML += `
+                    <div class="opt-card ${tKey === currentThemeKey ? 'selected' : ''}" 
+                         style="font-size: 0.72rem; padding: 4px;"
+                         onclick="event.stopPropagation(); setSpecificSemesterTheme('${key}', '${tKey}')">
+                        ${THEMES[tKey].name}
+                    </div>
+                `;
+            });
+
+            let moveButtonsHTML = '';
+            if (!isPinned) {
+                moveButtonsHTML = `
+                    <div class="move-btn-group" onclick="event.stopPropagation()">
+                        <button class="btn-move" onclick="moveSemesterIndex('${key}', -1, event)" ${index <= minMoveIndex ? 'disabled' : ''}>▲</button>
+                        <button class="btn-move" onclick="moveSemesterIndex('${key}', 1, event)" ${index === keys.length - 1 ? 'disabled' : ''}>▼</button>
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                <div class="semester-card-header" onclick="toggleSemesterAccordion('${key}')">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span>${key}</span>
+                        ${isPinned ? '<span style="font-size:0.85rem;">📌</span>' : ''}
+                    </div>
+                    <div style="display:flex; align-items:center; gap:4px;">
+                        ${moveButtonsHTML}
+                        <span style="font-size: 0.8rem; opacity: 0.7; margin-left: 4px;">${isExpanded ? '▴' : '▾'}</span>
+                    </div>
+                </div>
+                <div class="semester-card-body" style="background: ${themeObj.card}; border-top-color: ${themeObj.border};">
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label style="font-size:0.75rem;">修改學期名稱：</label>
+                        <input type="text" id="input-sem-name-${key}" value="${key}" style="padding: 4px 8px; font-size: 0.8rem;" onclick="event.stopPropagation()">
+                        <button class="btn btn-save" style="padding: 4px; font-size: 0.75rem; margin-top: 4px; background:${themeObj.primary};" onclick="event.stopPropagation(); renameSemester('${key}')">更新學期名稱</button>
+                    </div>
+
+                    <div style="font-size:0.75rem; font-weight:bold; margin-bottom: 4px;">學期配色風格 (即時預覽)：</div>
+                    <div class="option-cards" style="grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 10px;">
+                        ${themeButtonsHTML}
+                    </div>
+
+                    ${!isCurrent ? `<button class="btn btn-submit" style="width:100%; padding: 6px; font-size:0.8rem; background:${themeObj.primary};" onclick="event.stopPropagation(); switchSemesterDirect('${key}')">切換至此學期</button>` : `<div style="text-align:center; font-size:0.75rem; color:${themeObj.primary}; font-weight:bold;">★ 當前使用中學期</div>`}
+
+                    ${Object.keys(semesters).length > 1 ? `<button class="btn btn-danger" style="width:100%; padding: 4px; font-size:0.75rem; margin-top:6px;" onclick="event.stopPropagation(); deleteSemester('${key}')">移除此學期</button>` : ''}
+                </div>
+            `;
+            container.appendChild(card);
+        });
+
+        document.getElementById('currentSemesterTitle').innerText = currentSemesterKey ? `(${currentSemesterKey})` : '';
+        renderMainThemeOptions();
+    }
+
+    function switchSemesterDirect(key) {
+        switchSemester(key);
+        toggleSidebar();
+    }
+
+    function toggleSemesterAccordion(key) {
+        expandedSemesterKey = (expandedSemesterKey === key) ? null : key;
+        renderSemesters();
+    }
+
+    function setSpecificSemesterTheme(semKey, themeKey) {
+        if (semesters[semKey]) {
+            semesters[semKey].theme = themeKey;
+            if (semKey === currentSemesterKey) {
+                setTheme(themeKey);
+            }
+            saveToLocalStorageSilent();
+            renderSemesters();
+        }
+    }
+
+    function renameSemester(oldKey) {
+        const inputEl = document.getElementById(`input-sem-name-${oldKey}`);
+        const newTitle = inputEl ? inputEl.value.trim() : '';
+        if(!newTitle) return alert('學期名稱不能留白唷！');
+        if(newTitle === oldKey) return;
+        if(semesters[newTitle]) return alert('已經有同名的學期囉！');
+
+        const newSemesters = {};
+        Object.keys(semesters).forEach(k => {
+            if (k === oldKey) newSemesters[newTitle] = semesters[oldKey];
+            else newSemesters[k] = semesters[k];
+        });
+
+        semesters = newSemesters;
+        if (currentSemesterKey === oldKey) currentSemesterKey = newTitle;
+        if (pinnedSemesterKey === oldKey) {
+            pinnedSemesterKey = newTitle;
+            localStorage.setItem('v3_clean_pinned', newTitle);
+        }
+        if (expandedSemesterKey === oldKey) expandedSemesterKey = newTitle;
+
+        renderSemesters();
+        saveToLocalStorageSilent();
+    }
+
+    function setSemesterTheme(themeKey) {
+        if (semesters[currentSemesterKey]) {
+            semesters[currentSemesterKey].theme = themeKey;
+            setTheme(themeKey);
+            renderSemesters();
+        }
+    }
+
+    function addSemester() {
+        const input = document.getElementById('newSemesterName');
+        const name = input.value.trim();
+        if (!name) return alert('請填寫新學期的名字唷！');
+        if (semesters[name]) return alert('這個學期已經建立過了唷！');
+        semesters[name] = { courses: [], theme: 'oat' };
+        input.value = '';
+        expandedSemesterKey = name;
+        switchSemester(name);
+    }
+
+    function switchSemester(key) {
+        currentSemesterKey = key;
+        const semData = semesters[key] || { courses: [], theme: 'oat' };
+        courses = Array.isArray(semData) ? semData : (semData.courses || []);
+        
+        if (semData.theme) setTheme(semData.theme);
+
+        history = []; historyIndex = -1;
+        recordState();
+        renderSemesters();
+        updateUI();
+    }
+
+    function deleteSemester(key) {
+        if (confirm(`確定要刪除「${key}」學期嗎？`)) {
+            delete semesters[key];
+            if (pinnedSemesterKey === key) {
+                pinnedSemesterKey = null;
+                localStorage.removeItem('v3_clean_pinned');
+            }
+            currentSemesterKey = Object.keys(semesters)[0] || '';
+            if (currentSemesterKey) {
+                switchSemester(currentSemesterKey);
+            } else {
+                courses = [];
+                updateUI();
+                renderSemesters();
+            }
+            saveToLocalStorageSilent();
+        }
+    }
+
+    function setTheme(themeKey, el) {
+        if (el) {
+            document.querySelectorAll('#themeOptions .opt-card').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+        }
+        const t = THEMES[themeKey] || THEMES['oat'];
+        const root = document.documentElement;
+        root.style.setProperty('--bg-color', t.bg);
+        root.style.setProperty('--card-bg', t.card);
+        root.style.setProperty('--panel-bg', t.panel);
+        root.style.setProperty('--c-submit', t.primary);
+        root.style.setProperty('--c-blue', t.primary);
+        root.style.setProperty('--text-main', t.text);
+        root.style.setProperty('--text-sub', t.sub);
+        root.style.setProperty('--border-color', t.border);
+        root.style.setProperty('--grid-border', t.grid);
+    }
+
+    function setFontFamily(font, el) {
+        if(el) {
+            el.parentNode.querySelectorAll('.opt-card').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+        }
+        document.documentElement.style.setProperty('--font-family-custom', font);
+    }
+
+    function recordState() {
+        if (!currentSemesterKey) return;
+        history = history.slice(0, historyIndex + 1);
+        history.push(JSON.stringify(courses));
+        historyIndex++;
+        if (semesters[currentSemesterKey]) {
+            if (Array.isArray(semesters[currentSemesterKey])) {
+                semesters[currentSemesterKey] = { courses: courses, theme: 'oat' };
+            } else {
+                semesters[currentSemesterKey].courses = courses;
+            }
+        }
+        updateHistoryButtons();
+        saveToLocalStorageSilent();
+    }
+
+    function updateHistoryButtons() {
+        document.getElementById('btnUndo').disabled = historyIndex <= 0;
+        document.getElementById('btnRedo').disabled = historyIndex >= history.length - 1;
+    }
+
+    function undo() {
+        if (historyIndex > 0) {
+            historyIndex--;
+            courses = JSON.parse(history[historyIndex]);
+            if (semesters[currentSemesterKey]) semesters[currentSemesterKey].courses = courses;
+            updateUI(); updateHistoryButtons();
+            saveToLocalStorageSilent();
+        }
+    }
+
+    function redo() {
+        if (historyIndex < history.length - 1) {
+            historyIndex++;
+            courses = JSON.parse(history[historyIndex]);
+            if (semesters[currentSemesterKey]) semesters[currentSemesterKey].courses = courses;
+            updateUI(); updateHistoryButtons();
+            saveToLocalStorageSilent();
+        }
+    }
+
+    function handleAddCourse() {
+        if (!currentSemesterKey) return alert('請先建立一個學期課表唷！');
+        const name = document.getElementById('cName').value.trim();
+        if (!name) return alert('請填寫課程名稱唷！');
+        const selectedPeriods = Array.from(document.querySelectorAll('input[name="periods"]:checked')).map(el => el.value);
+        if (selectedPeriods.length === 0) return alert('請至少勾選一個上課節次唷！');
+
+        const inputCredits = document.getElementById('cCredits').value.trim();
+        const credits = inputCredits !== '' ? parseFloat(inputCredits) : selectedPeriods.length;
+        const courseType = document.getElementById('cType').value;
+
+        const newCourse = {
+            id: Date.now().toString(),
+            name: name,
+            code: document.getElementById('cCode').value.trim(),
+            teacher: document.getElementById('cTeacher').value.trim(),
+            room: document.getElementById('cRoom').value.trim(),
+            day: parseInt(document.getElementById('cDay').value),
+            weekType: document.getElementById('cWeekType').value,
+            borderStyle: document.getElementById('cBorderStyle').value,
+            customColor: selectedCustomColor,
+            periods: selectedPeriods,
+            credits: credits,
+            courseType: courseType,
+            url: '', notes: ''
+        };
+
+        courses.push(newCourse);
+        recordState();
+        updateUI();
+
+        document.getElementById('cName').value = '';
+        document.getElementById('cCode').value = '';
+        document.getElementById('cTeacher').value = '';
+        document.getElementById('cRoom').value = '';
+        document.getElementById('cCredits').value = '';
+        document.querySelectorAll('input[name="periods"]').forEach(cb => cb.checked = false);
+    }
+
+    function isConflict(c1, c2) {
+        if ((c1.weekType === '單週' && c2.weekType === '雙週') || (c1.weekType === '雙週' && c2.weekType === '單週')) return false;
+        return true;
+    }
+
+    function updateUI() {
+        PERIODS.forEach(p => DAYS.forEach(d => {
+            const el = document.getElementById(`cell-${d}-${p}`);
+            if(el) el.innerHTML = '';
+        }));
+
+        const gridMap = {};
+        courses.forEach(course => {
+            course.periods.forEach(p => {
+                const key = `${course.day}-${p}`;
+                if (!gridMap[key]) gridMap[key] = [];
+                gridMap[key].push(course);
+            });
+        });
+
+        Object.keys(gridMap).forEach(key => {
+            const [day, period] = key.split('-');
+            const cell = document.getElementById(`cell-${day}-${period}`);
+            if(!cell) return;
+            const cellCourses = gridMap[key];
+
+            cellCourses.forEach((c, idx) => {
+                let hasConflict = false;
+                for (let i = 0; i < cellCourses.length; i++) {
+                    if (i !== idx && isConflict(c, cellCourses[i])) { hasConflict = true; break; }
+                }
+
+                const isChecked = selectedCourseCodes.has(c.id) ? 'checked' : '';
+                const color = c.customColor || CARD_COLORS[0];
+                
+                let infoHTML = '';
+                if (c.code) infoHTML += `<div>代碼: ${c.code}</div>`;
+                if (c.teacher) infoHTML += `<div>教師: ${c.teacher}</div>`;
+                if (c.room) infoHTML += `<div>教室: ${c.room}</div>`;
+
+                let borderCSS = 'border-left: 3.5px solid ' + color.border + ';';
+                if (c.borderStyle === 'double') borderCSS = 'border: 3px double ' + color.border + ';';
+                else if (c.borderStyle === 'dashed') borderCSS = 'border: 1.5px dashed ' + color.border + ';';
+                else if (c.borderStyle === 'none') borderCSS = 'border: none;';
+
+                const cardHTML = `
+                    <div class="course-item" 
+                         style="background: ${color.bg}; ${borderCSS}"
+                         onclick="openCourseDetailModal('${c.id}', event)">
+                        <div class="course-header">
+                            <div class="course-title-wrap">
+                                <span class="course-title">${c.name}</span>
+                                ${hasConflict ? '<span class="conflict-badge">衝堂</span>' : ''}
+                            </div>
+                            <input type="checkbox" class="course-checkbox" onchange="toggleCourseSelect('${c.id}', this.checked)" onclick="event.stopPropagation()" ${isChecked}>
+                        </div>
+                        ${infoHTML}
+                        <div><span class="badge">${c.weekType}</span></div>
+                    </div>
+                `;
+                cell.innerHTML += cardHTML;
+            });
+        });
+
+        calculateStats();
+        checkConflicts(gridMap);
+    }
+
+    function calculateStats() {
+        let totalPeriods = 0;
+        let totalCredits = 0;
+        let requiredCredits = 0;
+        let electiveCredits = 0;
+        let generalCredits = 0;
+
+        courses.forEach(c => {
+            totalPeriods += c.periods ? c.periods.length : 0;
+            const cred = typeof c.credits === 'number' ? c.credits : (c.periods ? c.periods.length : 0);
+            totalCredits += cred;
+
+            if (c.courseType === '必修') requiredCredits += cred;
+            else if (c.courseType === '選修') electiveCredits += cred;
+            else if (c.courseType === '通識') generalCredits += cred;
+        });
+
+        document.getElementById('statTotalPeriods').innerText = totalPeriods;
+        document.getElementById('statTotalCredits').innerText = totalCredits;
+        document.getElementById('statRequiredCredits').innerText = `必修 ${requiredCredits}`;
+        document.getElementById('statElectiveCredits').innerText = `選修 ${electiveCredits}`;
+        document.getElementById('statGeneralCredits').innerText = `通識 ${generalCredits}`;
+    }
+
+    function openCourseDetailModal(id, e) {
+        if (e.target.tagName === 'INPUT') return;
+        currentDetailCourseId = id;
+        const c = courses.find(item => item.id === id);
+        if(!c) return;
+
+        document.getElementById('editName').value = c.name || '';
+        document.getElementById('editRoom').value = c.room || '';
+        document.getElementById('editCode').value = c.code || '';
+        document.getElementById('editTeacher').value = c.teacher || '';
+        document.getElementById('editCredits').value = typeof c.credits === 'number' ? c.credits : (c.periods ? c.periods.length : 0);
+        document.getElementById('editType').value = c.courseType || '必修';
+        document.getElementById('editBorderStyle').value = c.borderStyle || 'solid';
+
+        document.getElementById('detailUrl').value = c.url || '';
+        document.getElementById('detailNotes').value = c.notes || '';
+
+        initEditCardColorPicker(c.customColor);
+        document.getElementById('detailModal').classList.add('active');
+    }
+
+    function saveCourseDetails() {
+        const c = courses.find(item => item.id === currentDetailCourseId);
+        if(c) {
+            const newName = document.getElementById('editName').value.trim();
+            if(!newName) return alert('課程名稱不能留白唷！');
+
+            c.name = newName;
+            c.room = document.getElementById('editRoom').value.trim();
+            c.code = document.getElementById('editCode').value.trim();
+            c.teacher = document.getElementById('editTeacher').value.trim();
+            
+            const credVal = document.getElementById('editCredits').value.trim();
+            c.credits = credVal !== '' ? parseFloat(credVal) : (c.periods ? c.periods.length : 0);
+            c.courseType = document.getElementById('editType').value;
+
+            c.borderStyle = document.getElementById('editBorderStyle').value;
+            c.customColor = editCustomColor;
+
+            c.url = document.getElementById('detailUrl').value.trim();
+            c.notes = document.getElementById('detailNotes').value.trim();
+
+            recordState();
+            updateUI();
+        }
+        closeModal('detailModal');
+    }
+
+    function openCourseUrl() {
+        const url = document.getElementById('detailUrl').value.trim();
+        if (url) window.open(url, '_blank');
+        else alert('尚未輸入網址連結唷！');
+    }
+
+    function toggleCourseSelect(id, isChecked) {
+        if (isChecked) selectedCourseCodes.add(id);
+        else selectedCourseCodes.delete(id);
+        updateUI();
+    }
+
+    function deleteSelectedCourses() {
+        if (selectedCourseCodes.size === 0) return alert('請先勾選想要移除的課程唷！');
+        if (confirm(`確定要將選取的 ${selectedCourseCodes.size} 門課程整堂刪除嗎？`)) {
+            courses = courses.filter(c => !selectedCourseCodes.has(c.id));
+            selectedCourseCodes.clear();
+            recordState(); 
+            updateUI();
+        }
+    }
+
+    function deleteCourseById(id) {
+        courses = courses.filter(c => c.id !== id);
+        recordState(); 
+        updateUI();
+    }
+
+    function checkConflicts(gridMap) {
+        const conflictBox = document.getElementById('conflictBox');
+        const conflictList = document.getElementById('conflictList');
+        conflictList.innerHTML = '';
+        let hasConflict = false;
+        const dayNames = ['', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
+
+        Object.keys(gridMap).forEach(key => {
+            const list = gridMap[key];
+            if (list.length > 1) {
+                const conflictingCourses = new Set();
+                for (let i = 0; i < list.length; i++) {
+                    for (let j = i + 1; j < list.length; j++) {
+                        if (isConflict(list[i], list[j])) {
+                            conflictingCourses.add(list[i]);
+                            conflictingCourses.add(list[j]);
+                        }
+                    }
+                }
+
+                if (conflictingCourses.size > 0) {
+                    hasConflict = true;
+                    const [day, period] = key.split('-');
+
+                    let groupHTML = `
+                        <div class="conflict-group">
+                            <div class="conflict-group-title">📌 ${dayNames[day]} 第 ${period} 節 發生衝堂：</div>
+                    `;
+
+                    conflictingCourses.forEach(c => {
+                        let detail = c.teacher ? `${c.teacher}` : '';
+                        if(c.room) detail += ` (${c.room})`;
+
+                        groupHTML += `
+                            <div class="conflict-row-item">
+                                <span><strong>${c.name}</strong> ${c.code ? `(${c.code})` : ''} ${detail} [<b style="color: var(--c-red);">${c.weekType}</b>]</span>
+                                <button class="btn btn-danger" style="padding: 2px 8px; font-size: 0.72rem;" onclick="deleteCourseById('${c.id}')">移除此課</button>
+                            </div>
+                        `;
+                    });
+
+                    groupHTML += `</div>`;
+                    conflictList.innerHTML += groupHTML;
+                }
+            }
+        });
+
+        if (hasConflict) {
+            conflictBox.style.display = 'block';
+            document.getElementById('conflictBody').classList.remove('collapsed');
+            document.getElementById('conflictToggleBtn').innerText = '收起 ▴';
+        } else {
+            conflictBox.style.display = 'none';
+        }
+    }
+
+    function saveToLocalStorage() {
+        saveToLocalStorageSilent();
+        alert('課表資料已幫你成功儲存至瀏覽器囉！');
+    }
+
+    function openExportModal(e) {
+        if (e) e.stopPropagation();
+        document.getElementById('exportScheduleName').value = currentSemesterKey || '我的學期課表';
+        const modal = document.getElementById('exportModal');
+        if (modal) modal.classList.add('active');
+    }
+
+    function selectExportSize(ratio, el) {
+        selectedExportRatio = ratio;
+        el.parentNode.querySelectorAll('.opt-card').forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected');
+    }
+
+    /* ✨ 截圖圖片標題（僅保留第一行自訂名稱大字，移除第二行） */
+    function executeExport() {
+        const customName = document.getElementById('exportScheduleName').value.trim() || '我的學期課表';
+        closeModal('exportModal');
+
+        const titleBox = document.getElementById('screenshotTitleBox');
+        const mainTitle = document.getElementById('screenshotMainTitle');
+        const target = document.getElementById('scheduleTableCard');
+
+        mainTitle.innerText = customName;
+        titleBox.style.display = 'block';
+
+        const checkboxes = document.querySelectorAll('.course-checkbox');
+        checkboxes.forEach(cb => cb.style.display = 'none');
+
+        let origPadding = target.style.padding;
+        if (selectedExportRatio === 'iphone') target.style.padding = '30px 16px 60px 16px';
+        else if (selectedExportRatio === 'ipad') target.style.padding = '24px 30px';
+
+        html2canvas(target, {
+            scale: 2,
+            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--card-bg').trim(),
+            useCORS: true
+        }).then(canvas => {
+            checkboxes.forEach(cb => cb.style.display = 'inline-block');
+            titleBox.style.display = 'none';
+            target.style.padding = origPadding;
+
+            const link = document.createElement('a');
+            link.download = `${customName}_課表截圖.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }).catch(() => {
+            checkboxes.forEach(cb => cb.style.display = 'inline-block');
+            titleBox.style.display = 'none';
+            target.style.padding = origPadding;
+            alert('圖片繪製失敗，請再試一次唷！');
+        });
+    }
+
+    window.onload = () => {
+        initCardColorPicker();
+        renderAppIconGrid();
+        
+        ['v2_semesters_data', 'v2_pinned_semester', 'my_semesters_data', 'my_pinned_semester'].forEach(k => localStorage.removeItem(k));
+
+        const savedTitle = localStorage.getItem('my_app_title_name');
+        if (savedTitle) {
+            appTitleName = savedTitle;
+            document.getElementById('mainAppNameInput').value = savedTitle;
+        }
+
+        const savedCollapsed = localStorage.getItem('v3_course_form_collapsed');
+        if (savedCollapsed === 'true') {
+            isCourseFormCollapsed = true;
+            document.getElementById('courseFormBody').classList.add('collapsed');
+            document.getElementById('courseFormToggleBtn').innerText = '展開 ▾';
+        }
+
+        const savedPinned = localStorage.getItem('v3_clean_pinned');
+        if (savedPinned) {
+            pinnedSemesterKey = savedPinned;
+        }
+
+        const savedData = localStorage.getItem('v3_clean_semesters');
+        if (savedData) {
+            try {
+                semesters = JSON.parse(savedData);
+            } catch(e){}
+        }
+
+        const keys = Object.keys(semesters);
+        
+        if (keys.length === 0) {
+            const defaultKey = '未命名學期';
+            semesters = {};
+            semesters[defaultKey] = { courses: [], theme: 'oat' };
+            currentSemesterKey = defaultKey;
+        } else {
+            if (pinnedSemesterKey && semesters[pinnedSemesterKey]) {
+                currentSemesterKey = pinnedSemesterKey;
+            } else {
+                currentSemesterKey = keys[0];
+            }
+        }
+
+        switchSemester(currentSemesterKey);
+    };
+</script>
+
+</body>
+</html>
