@@ -12,6 +12,36 @@
     <meta id="appMobileTitle" name="apple-mobile-web-app-title" content="排課表">
     <link id="dynamicAppleIcon" rel="apple-touch-icon" sizes="180x180" href="">
 
+    <!-- 內嵌動態 Manifest，鎖定 App ID 與 start_url，解決多重 Icon 與沙盒資料不互通問題 -->
+    <script>
+        (function() {
+            // 1. 網址正規化：去除多餘的 index.html 與 query 參數，確保唯一的網域入口與沙盒存取
+            const cleanPath = window.location.pathname.replace(/\/index\.html$/, '/');
+            if (window.location.pathname !== cleanPath) {
+                window.history.replaceState(null, '', cleanPath + window.location.search + window.location.hash);
+            }
+
+            // 2. 動態產生內嵌 manifest.json 避免檔案缺失
+            const manifest = {
+                "name": "排課小助手 Pro",
+                "short_name": "排課表",
+                "id": cleanPath,
+                "start_url": cleanPath,
+                "display": "standalone",
+                "background_color": "#F7F5F0",
+                "theme_color": "#C6A675"
+            };
+            const stringManifest = JSON.stringify(manifest);
+            const blob = new Blob([stringManifest], {type: 'application/json'});
+            const manifestUrl = URL.createObjectURL(blob);
+            
+            const link = document.createElement('link');
+            link.rel = 'manifest';
+            link.href = manifestUrl;
+            document.head.appendChild(link);
+        })();
+    </script>
+
     <!-- 引入 Google Fonts 繁體中文全字庫無缺字字型 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,6 +61,7 @@
             --c-save: #7BB4A8;
             --c-screenshot: #D9A86C; 
             --c-pwa: #D8A7B1; /* 溫柔淺藕粉色 */
+            --c-backup: #E8D5B5; /* 溫柔淡可可棕色 */
             
             --bg-color: #F7F5F0;
             --card-bg: #EFECE6;
@@ -84,6 +115,7 @@
         .btn-sidebar { background: #8C8275; color: #fff; }
         .btn-zoom { background: #6B7A82; color: #fff; }
         .btn-pwa { background: var(--c-pwa); color: #5C3A44; }
+        .btn-backup { background: var(--c-backup); color: #FFFFFF; }
 
         /* 左側學期管理抽屜欄 */
         .sidebar {
@@ -96,7 +128,6 @@
         .sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-weight: bold; font-size: 1.1rem; }
         .semester-list { flex: 1; overflow-y: auto; }
         
-        /* 手風琴學期卡片 */
         .semester-card {
             background: var(--panel-bg); border-radius: 10px; margin-bottom: 10px;
             border: 2px solid transparent; transition: all 0.25s ease; overflow: hidden;
@@ -135,7 +166,7 @@
         }
         .opt-card.selected { border-color: var(--c-submit); background: var(--card-bg); }
 
-        /* 圖示選擇器修復樣式 */
+        /* 圖示選擇器 */
         .app-icon-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(115px, 1fr)); gap: 10px; margin-top: 8px; max-height: 300px; overflow-y: auto; padding: 4px; }
         .app-icon-card {
             background: var(--panel-bg); border: 2px solid transparent; border-radius: 14px;
@@ -145,6 +176,8 @@
         .app-icon-card.selected { border-color: var(--c-pwa); background: #FFF5F7; transform: scale(1.03); box-shadow: 0 4px 12px rgba(216, 167, 177, 0.3); }
         .app-icon-preview-box { width: 64px; height: 64px; border-radius: 14px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: white; box-shadow: 0 3px 8px rgba(0,0,0,0.08); }
         .app-icon-preview-box svg { width: 100%; height: 100%; display: block; }
+        .app-icon-title { font-size: 0.8rem; font-weight: bold; color: var(--text-main); }
+        .app-icon-sub { font-size: 0.68rem; color: var(--text-sub); }
 
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(125px, 1fr)); gap: 10px; margin-bottom: 10px; }
         .form-group { display: flex; flex-direction: column; gap: 4px; width: 100%; }
@@ -159,7 +192,7 @@
 
         .editable-app-title {
             border: none; background: transparent; font-size: 1.3rem; font-weight: 700;
-            color: var(--text-main); padding: 2px 4px; border-radius: 6px; width: auto; max-width: 200px;
+            color: var(--text-main); padding: 2px 4px; border-radius: 6px; width: auto; max-width: 180px;
         }
         .editable-app-title:hover, .editable-app-title:focus { background: var(--panel-bg); outline: none; }
 
@@ -294,7 +327,7 @@
 </head>
 <body>
 
-<!-- 左側學期管理側邊欄 -->
+<!-- 左側學期管理抽屜欄 -->
 <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
         <span>學期管理選單</span>
@@ -315,11 +348,10 @@
 </div>
 
 <div class="container">
+    <!-- 頂部列 -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <div style="display: flex; align-items: center; gap: 4px;">
-            <input type="text" id="mainAppNameInput" class="editable-app-title" value="排課小助手" onchange="saveAppNameChange()">
-            <span id="currentSemesterTitle" style="font-size: 0.9rem; opacity: 0.8;"></span>
-        </div>
+        <input type="text" id="mainAppNameInput" class="editable-app-title" value="排課小助手" onchange="saveAppNameChange()">
+        <div id="currentSemesterTitleDisplay" style="font-size: 1.3rem; font-weight: 700; color: var(--c-submit); letter-spacing: 0.5px; text-align: center; flex: 1; padding: 0 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">-</div>
         <button class="btn btn-sidebar" onclick="toggleSidebar()">學期選單</button>
     </div>
 
@@ -328,11 +360,14 @@
         <button id="btnRedo" class="btn btn-redo" onclick="redo()" disabled>↪️ 下一步</button>
         <button class="btn btn-save" onclick="saveToLocalStorage()">💾 儲存課表</button>
         <button class="btn btn-screenshot" onclick="openExportModal(event)">📱 截圖並分享</button>
-        <!-- 淺藕粉色「📱 儲存至主畫面」按鈕 -->
         <button class="btn btn-pwa" onclick="openPwaModal(event)">📱 儲存至主畫面</button>
         <button class="btn btn-danger" onclick="deleteSelectedCourses()">🗑️ 刪除所選課程</button>
         <button class="btn btn-appearance" onclick="toggleAppearancePanel()">🎨 外觀設定</button>
         <button class="btn btn-zoom" id="btnZoomToggle" onclick="cycleZoomScale()">🔍 縮放: 100%</button>
+        <!-- ✨ 按鈕移至縮放之後，並套用可愛淡可可棕色 -->
+        <button class="btn btn-backup" onclick="exportBackupJSON()">📥 匯出備份</button>
+        <button class="btn btn-backup" onclick="triggerImportJSON()">📤 匯入備份</button>
+        <input type="file" id="importJsonFileInput" accept=".json" style="display:none;" onchange="importBackupJSON(event)">
     </div>
 
     <!-- 外觀設定面板 -->
@@ -375,15 +410,21 @@
                     <label for="cCredits">學分數</label>
                     <input type="number" id="cCredits" min="0" max="10" placeholder="預設依節數帶入">
                 </div>
+                <!-- ✨ 新增修別選擇與動態輸入框 -->
                 <div class="form-group">
                     <label for="cType">修別屬性</label>
-                    <select id="cType">
+                    <select id="cType" onchange="toggleCustomTypeInput('cType', 'cCustomTypeGroup')">
                         <option value="必修">必修</option>
                         <option value="選修">選修</option>
                         <option value="通識">通識</option>
-                        <option value="其他">其他</option>
+                        <option value="其他">其他 (自訂)</option>
                     </select>
                 </div>
+                <div class="form-group" id="cCustomTypeGroup" style="display: none;">
+                    <label for="cCustomType">自訂修別名稱 *</label>
+                    <input type="text" id="cCustomType" placeholder="例如：體育、軍訓">
+                </div>
+
                 <div class="form-group">
                     <label for="cCode">課程代碼</label>
                     <input type="text" id="cCode" placeholder="例：PSY101 (選填)">
@@ -527,15 +568,22 @@
                 <label>學分數</label>
                 <input type="number" id="editCredits" min="0" max="10">
             </div>
+            
+            <!-- ✨ 編輯 Modal 中的動態修別選擇器 -->
             <div class="form-group">
                 <label>修別屬性</label>
-                <select id="editType">
+                <select id="editType" onchange="toggleCustomTypeInput('editType', 'editCustomTypeGroup')">
                     <option value="必修">必修</option>
                     <option value="選修">選修</option>
                     <option value="通識">通識</option>
-                    <option value="其他">其他</option>
+                    <option value="其他">其他 (自訂)</option>
                 </select>
             </div>
+            <div class="form-group" id="editCustomTypeGroup" style="display: none;">
+                <label for="editCustomType">自訂修別名稱 *</label>
+                <input type="text" id="editCustomType" placeholder="例如：體育、軍訓">
+            </div>
+
             <div class="form-group">
                 <label>課程代碼</label>
                 <input type="text" id="editCode">
@@ -606,7 +654,7 @@
     </div>
 </div>
 
-<!-- ✨ 專屬「📱 儲存至主畫面」獨立設定視窗 -->
+<!-- ✨ 專屬「📱 儲存至主畫面」設定視窗 -->
 <div class="modal-overlay" id="pwaModal">
     <div class="modal-box">
         <div class="modal-header">
@@ -622,12 +670,19 @@
         <div class="setting-title" style="color:var(--c-pwa);">2. 選擇喜歡的莫蘭迪桌面圖示：</div>
         <div class="app-icon-grid" id="pwaAppIconGrid"></div>
 
-        <div style="margin-top: 14px; font-size: 0.78rem; color: var(--text-main); line-height: 1.5; background: #FFF8F9; border: 1px solid var(--c-pwa); padding: 10px; border-radius: 8px;">
-            🌸 <b>套用完成後：</b><br>
-            點擊 iPad/iPhone 頂部或底部的 <b>「分享 ➔ 加到主畫面」</b>，即可將你剛剛設定好的名稱與精美莫蘭迪圖示直接存至桌面！
+        <div id="pwaTipBox" style="margin-top: 14px; font-size: 0.78rem; color: var(--text-main); line-height: 1.6; background: #FFF8F9; border: 1px solid var(--c-pwa); padding: 12px; border-radius: 8px;">
+            🌸 <b>您的課表資料都會安全保留，切換圖示絕不會讓課程消失唷！</b><br>
+            若想更新桌面圖示，請依照以下 3 個簡單步驟操作：<br>
+            <b>第 1 步：</b> 點擊下方按鈕在 **Safari** 中打開本網頁。<br>
+            <b>第 2 步：</b> 點擊 Safari 瀏覽器頂部或底部的 **「分享 📤」** 按鈕。<br>
+            <b>第 3 步：</b> 選擇 **「加到主畫面 ➕」** 並新增，即可完美更新桌面圖示！
         </div>
 
-        <div class="modal-footer">
+        <div style="margin-top: 10px; text-align: center;">
+            <a href="" id="safariOpenBtn" target="_blank" class="btn" style="background: #E08291; color: white; width: 100%; padding: 10px; font-size: 0.9rem; text-decoration: none;">🔗 點我跳轉至 Safari 瀏覽器</a>
+        </div>
+
+        <div class="modal-footer" style="margin-top: 10px;">
             <button class="btn btn-pwa" onclick="confirmPwaSetup()">套用圖示與規格 ✨</button>
         </div>
     </div>
@@ -661,7 +716,6 @@
         { bg: '#C9BCB322', border: '#C9BCB3' }
     ];
 
-    /* ✨ 8 款精繪 SVG 圖示數據 (100% 純內建獨立離線載入) */
     const APP_ICONS = [
         { 
             id: 'icon1', title: '排課表', sub: '簡單排課 · 清楚規劃', bg: '#FAF8F5',
@@ -717,17 +771,42 @@
     function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
     function toggleAppearancePanel() { 
         document.getElementById('appearancePanel').classList.toggle('active'); 
-        renderAppIconGrid('appIconGrid');
     }
     function closeModal(id) { 
         const el = document.getElementById(id);
         if(el) el.classList.remove('active'); 
     }
 
-    /* ✨ 打開專屬 PWA 儲存至主畫面 Modal */
+    /* ✨ 控制自訂修別輸入框的顯隱切換 */
+    function toggleCustomTypeInput(selectId, groupId) {
+        const selectEl = document.getElementById(selectId);
+        const groupEl = document.getElementById(groupId);
+        if (selectEl && groupEl) {
+            if (selectEl.value === '其他') {
+                groupEl.style.display = 'flex';
+            } else {
+                groupEl.style.display = 'none';
+            }
+        }
+    }
+
+    /* 打開專屬 PWA 儲存至主畫面 Modal */
     function openPwaModal(e) {
         if (e) e.stopPropagation();
         renderAppIconGrid('pwaAppIconGrid');
+
+        const safariBtn = document.getElementById('safariOpenBtn');
+        if (safariBtn) safariBtn.href = window.location.origin + window.location.pathname;
+
+        const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+        const tipBox = document.getElementById('pwaTipBox');
+
+        if (isStandalone && tipBox) {
+            tipBox.innerHTML = `🌸 <b>小提醒：</b>目前您已在桌面 App 模式中開啟囉！若想替換桌面圖示，請點擊下方按鈕在 Safari 中開啟本網頁，即可重新選擇圖示並加到主畫面來更新桌布圖示喔！`;
+        } else if (tipBox) {
+            tipBox.innerHTML = `🌸 <b>您的課表資料都會安全保留，切換圖示絕不會讓課程消失唷！</b><br>若想更新桌面圖示，請依照以下 3 個簡單步驟操作：<br><b>第 1 步：</b> 點擊下方按鈕在 **Safari** 中打開本網頁。<br><b>第 2 步：</b> 點擊 Safari 瀏覽器頂部或底部的 **「分享 📤」** 按鈕。<br><b>第 3 步：</b> 選擇 **「加到主畫面 ➕」** 並新增，即可完美更新桌面圖示！`;
+        }
+
         const modal = document.getElementById('pwaModal');
         if (modal) modal.classList.add('active');
     }
@@ -737,6 +816,73 @@
         const metaTitle = document.getElementById('appMobileTitle');
         if (metaTitle) metaTitle.content = titleVal;
         localStorage.setItem('v3_pwa_custom_title', titleVal);
+    }
+
+    /* ✨ 匯出備份 JSON */
+    function exportBackupJSON() {
+        const backupData = {
+            version: 'v3',
+            exportDate: new Date().toISOString(),
+            appTitle: appTitleName,
+            pinnedSemester: pinnedSemesterKey,
+            semesters: semesters
+        };
+
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `排課小助手_完整課表備份_${new Date().toISOString().slice(0, 10)}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    /* ✨ 觸發匯入備份 JSON */
+    function triggerImportJSON() {
+        document.getElementById('importJsonFileInput').click();
+    }
+
+    /* ✨ 讀取並還原備份 JSON */
+    function importBackupJSON(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const parsed = JSON.parse(e.target.result);
+                if (!parsed.semesters) throw new Error('格式不正確');
+
+                if (confirm('匯入備份將會覆蓋您目前的課表資料，確定要繼續嗎？')) {
+                    semesters = parsed.semesters || {};
+                    pinnedSemesterKey = parsed.pinnedSemester || null;
+                    
+                    if (parsed.appTitle) {
+                        appTitleName = parsed.appTitle;
+                        document.getElementById('mainAppNameInput').value = appTitleName;
+                        localStorage.setItem('my_app_title_name', appTitleName);
+                    }
+
+                    saveToLocalStorageSilent();
+
+                    const keys = Object.keys(semesters);
+                    if (keys.length > 0) {
+                        currentSemesterKey = (pinnedSemesterKey && semesters[pinnedSemesterKey]) ? pinnedSemesterKey : keys[0];
+                        switchSemester(currentSemesterKey);
+                    } else {
+                        courses = [];
+                        updateUI();
+                        renderSemesters();
+                    }
+
+                    alert('🎉 課表資料已順利還原完畢！');
+                }
+            } catch (err) {
+                alert('⚠️ 匯入失敗：這似乎不是有效的排課小助手備份檔案唷！');
+            }
+            event.target.value = ''; // 清空選擇器
+        };
+        reader.readAsText(file);
     }
 
     function toggleCourseFormCollapse() {
@@ -814,7 +960,6 @@
         });
     }
 
-    /* ✨ 用 Canvas 將選中的 SVG 轉成 iOS 支援的 180x180 高清 PNG Apple Touch Icon */
     function generatePngAppleIcon(svgString, callback) {
         const canvas = document.createElement('canvas');
         canvas.width = 180;
@@ -835,7 +980,7 @@
     }
 
     function renderAppIconGrid(targetContainerId = 'pwaAppIconGrid') {
-        const container = document.getElementById(targetContainerId);
+        const container = document.getElementById(targetContainerId) || document.getElementById('appIconGrid');
         if (!container) return;
         container.innerHTML = '';
 
@@ -951,7 +1096,7 @@
         
         if (keys.length === 0) {
             container.innerHTML = `<div style="text-align:center; padding: 20px; font-size:0.85rem; color:var(--text-sub);">目前還沒有任何學期課表唷！<br>請在上方建立第一個學期～</div>`;
-            document.getElementById('currentSemesterTitle').innerText = '';
+            document.getElementById('currentSemesterTitleDisplay').innerText = '未命名學期';
             return;
         }
 
@@ -1021,7 +1166,7 @@
             container.appendChild(card);
         });
 
-        document.getElementById('currentSemesterTitle').innerText = currentSemesterKey ? `(${currentSemesterKey})` : '';
+        document.getElementById('currentSemesterTitleDisplay').innerText = currentSemesterKey ? currentSemesterKey : '未命名學期';
         renderMainThemeOptions();
     }
 
@@ -1189,6 +1334,7 @@
         }
     }
 
+    /* ✨ 處理新增課程 (含自訂修別判定) */
     function handleAddCourse() {
         if (!currentSemesterKey) return alert('請先建立一個學期課表唷！');
         const name = document.getElementById('cName').value.trim();
@@ -1198,7 +1344,12 @@
 
         const inputCredits = document.getElementById('cCredits').value.trim();
         const credits = inputCredits !== '' ? parseFloat(inputCredits) : selectedPeriods.length;
-        const courseType = document.getElementById('cType').value;
+        
+        let courseType = document.getElementById('cType').value;
+        if (courseType === '其他') {
+            const customVal = document.getElementById('cCustomType').value.trim();
+            courseType = customVal !== '' ? customVal : '其他';
+        }
 
         const newCourse = {
             id: Date.now().toString(),
@@ -1225,6 +1376,9 @@
         document.getElementById('cTeacher').value = '';
         document.getElementById('cRoom').value = '';
         document.getElementById('cCredits').value = '';
+        document.getElementById('cType').value = '必修';
+        document.getElementById('cCustomType').value = '';
+        toggleCustomTypeInput('cType', 'cCustomTypeGroup');
         document.querySelectorAll('input[name="periods"]').forEach(cb => cb.checked = false);
     }
 
@@ -1285,7 +1439,7 @@
                             <input type="checkbox" class="course-checkbox" onchange="toggleCourseSelect('${c.id}', this.checked)" onclick="event.stopPropagation()" ${isChecked}>
                         </div>
                         ${infoHTML}
-                        <div><span class="badge">${c.weekType}</span></div>
+                        <div><span class="badge">${c.courseType || '必修'}</span> <span class="badge">${c.weekType}</span></div>
                     </div>
                 `;
                 cell.innerHTML += cardHTML;
@@ -1320,6 +1474,7 @@
         document.getElementById('statGeneralCredits').innerText = `通識 ${generalCredits}`;
     }
 
+    /* ✨ 打開編輯 Modal 時回填自訂修別 */
     function openCourseDetailModal(id, e) {
         if (e.target.tagName === 'INPUT') return;
         currentDetailCourseId = id;
@@ -1331,9 +1486,20 @@
         document.getElementById('editCode').value = c.code || '';
         document.getElementById('editTeacher').value = c.teacher || '';
         document.getElementById('editCredits').value = typeof c.credits === 'number' ? c.credits : (c.periods ? c.periods.length : 0);
-        document.getElementById('editType').value = c.courseType || '必修';
-        document.getElementById('editBorderStyle').value = c.borderStyle || 'solid';
+        
+        // 判斷是否為預設修別
+        const standardTypes = ['必修', '選修', '通識'];
+        const currentType = c.courseType || '必修';
+        if (standardTypes.includes(currentType)) {
+            document.getElementById('editType').value = currentType;
+            document.getElementById('editCustomType').value = '';
+        } else {
+            document.getElementById('editType').value = '其他';
+            document.getElementById('editCustomType').value = currentType;
+        }
+        toggleCustomTypeInput('editType', 'editCustomTypeGroup');
 
+        document.getElementById('editBorderStyle').value = c.borderStyle || 'solid';
         document.getElementById('detailUrl').value = c.url || '';
         document.getElementById('detailNotes').value = c.notes || '';
 
@@ -1341,6 +1507,7 @@
         document.getElementById('detailModal').classList.add('active');
     }
 
+    /* ✨ 儲存編輯詳情 */
     function saveCourseDetails() {
         const c = courses.find(item => item.id === currentDetailCourseId);
         if(c) {
@@ -1354,7 +1521,13 @@
             
             const credVal = document.getElementById('editCredits').value.trim();
             c.credits = credVal !== '' ? parseFloat(credVal) : (c.periods ? c.periods.length : 0);
-            c.courseType = document.getElementById('editType').value;
+            
+            let courseType = document.getElementById('editType').value;
+            if (courseType === '其他') {
+                const customVal = document.getElementById('editCustomType').value.trim();
+                courseType = customVal !== '' ? customVal : '其他';
+            }
+            c.courseType = courseType;
 
             c.borderStyle = document.getElementById('editBorderStyle').value;
             c.customColor = editCustomColor;
