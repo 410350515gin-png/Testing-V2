@@ -1,3 +1,5 @@
+同步課表
+
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -364,10 +366,8 @@
         <button class="btn btn-danger" onclick="deleteSelectedCourses()">🗑️ 刪除所選課程</button>
         <button class="btn btn-appearance" onclick="toggleAppearancePanel()">🎨 外觀設定</button>
         <button class="btn btn-zoom" id="btnZoomToggle" onclick="cycleZoomScale()">🔍 縮放: 100%</button>
-        <!-- ✨ 按鈕移至縮放之後，並套用可愛淡可可棕色 -->
-        <button class="btn btn-backup" onclick="exportBackupJSON()">📥 匯出備份</button>
-        <button class="btn btn-backup" onclick="triggerImportJSON()">📤 匯入備份</button>
-        <input type="file" id="importJsonFileInput" accept=".json" style="display:none;" onchange="importBackupJSON(event)">
+        <!-- ✨ 已將舊的匯入/匯出鍵，整合替換為單一「🔄 同步課表」按鈕 -->
+        <button class="btn btn-backup" onclick="openSyncModal(event)">🔄 同步課表</button>
     </div>
 
     <!-- 外觀設定面板 -->
@@ -410,7 +410,6 @@
                     <label for="cCredits">學分數</label>
                     <input type="number" id="cCredits" min="0" max="10" placeholder="預設依節數帶入">
                 </div>
-                <!-- ✨ 新增修別選擇與動態輸入框 -->
                 <div class="form-group">
                     <label for="cType">修別屬性</label>
                     <select id="cType" onchange="toggleCustomTypeInput('cType', 'cCustomTypeGroup')">
@@ -569,7 +568,6 @@
                 <input type="number" id="editCredits" min="0" max="10">
             </div>
             
-            <!-- ✨ 編輯 Modal 中的動態修別選擇器 -->
             <div class="form-group">
                 <label>修別屬性</label>
                 <select id="editType" onchange="toggleCustomTypeInput('editType', 'editCustomTypeGroup')">
@@ -654,7 +652,7 @@
     </div>
 </div>
 
-<!-- ✨ 專屬「📱 儲存至主畫面」設定視窗 -->
+<!-- 📱 儲存至主畫面設定視窗 -->
 <div class="modal-overlay" id="pwaModal">
     <div class="modal-box">
         <div class="modal-header">
@@ -684,6 +682,39 @@
 
         <div class="modal-footer" style="margin-top: 10px;">
             <button class="btn btn-pwa" onclick="confirmPwaSetup()">套用圖示與規格 ✨</button>
+        </div>
+    </div>
+</div>
+
+<!-- 🔄 ✨ 全新專屬課表同步 Modal -->
+<div class="modal-overlay" id="syncModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span>🔄 課表跨裝置/模式同步</span>
+            <button class="btn" style="padding:2px 8px; background:#CBD5E1; color:#333;" onclick="closeModal('syncModal')">✕</button>
+        </div>
+        
+        <!-- 區塊 A：產生與複製代碼 -->
+        <div style="background: var(--panel-bg); padding: 12px; border-radius: 8px; margin-bottom: 14px; border: 1px solid var(--border-color);">
+            <div style="font-weight: bold; font-size: 0.85rem; color: var(--text-main); margin-bottom: 4px;">📤 產生當前課表同步碼</div>
+            <div style="font-size: 0.75rem; color: var(--text-sub); margin-bottom: 8px;">若要把目前的課表傳到 Safari 或別的手機，請點擊下方按鈕複製代碼：</div>
+            
+            <button class="btn btn-backup" style="width: 100%; padding: 8px; font-size: 0.85rem;" onclick="generateAndCopySyncCode()">
+                📋 產生並複製同步碼
+            </button>
+        </div>
+
+        <!-- 區塊 B：貼上並同步 -->
+        <div style="background: var(--panel-bg); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <div style="font-weight: bold; font-size: 0.85rem; color: var(--text-main); margin-bottom: 4px;">📥 貼上同步碼還原課表</div>
+            <div style="font-size: 0.75rem; color: var(--text-sub); margin-bottom: 8px;">請在下方貼上您複製好的同步碼：</div>
+            
+            <div style="display: flex; gap: 6px;">
+                <input type="text" id="syncCodeInput" placeholder="在此貼上同步碼..." style="flex: 1; padding: 6px 8px; font-size: 0.8rem; border-radius: 6px;">
+                <button class="btn btn-save" style="padding: 6px 12px; font-size: 0.85rem; white-space: nowrap;" onclick="applySyncCode()">
+                    🔄 開始同步
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -777,7 +808,6 @@
         if(el) el.classList.remove('active'); 
     }
 
-    /* ✨ 控制自訂修別輸入框的顯隱切換 */
     function toggleCustomTypeInput(selectId, groupId) {
         const selectEl = document.getElementById(selectId);
         const groupEl = document.getElementById(groupId);
@@ -790,7 +820,6 @@
         }
     }
 
-    /* 打開專屬 PWA 儲存至主畫面 Modal */
     function openPwaModal(e) {
         if (e) e.stopPropagation();
         renderAppIconGrid('pwaAppIconGrid');
@@ -818,71 +847,78 @@
         localStorage.setItem('v3_pwa_custom_title', titleVal);
     }
 
-    /* ✨ 匯出備份 JSON */
-    function exportBackupJSON() {
-        const backupData = {
-            version: 'v3',
-            exportDate: new Date().toISOString(),
-            appTitle: appTitleName,
-            pinnedSemester: pinnedSemesterKey,
-            semesters: semesters
-        };
-
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
-        const downloadAnchor = document.createElement('a');
-        downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", `排課小助手_完整課表備份_${new Date().toISOString().slice(0, 10)}.json`);
-        document.body.appendChild(downloadAnchor);
-        downloadAnchor.click();
-        downloadAnchor.remove();
+    /* ✨ [全新] 開啟同步 Modal */
+    function openSyncModal(e) {
+        if (e) e.stopPropagation();
+        document.getElementById('syncCodeInput').value = ''; // 清空欄位
+        document.getElementById('syncModal').classList.add('active');
     }
 
-    /* ✨ 觸發匯入備份 JSON */
-    function triggerImportJSON() {
-        document.getElementById('importJsonFileInput').click();
+    /* ✨ [全新] 產生並自動複製同步碼 */
+    function generateAndCopySyncCode() {
+        const savedData = localStorage.getItem('v3_clean_semesters');
+        if (!savedData) return alert('目前沒有課表資料可以產生同步碼唷！');
+
+        try {
+            // 打包全學期資料與置頂學期
+            const payload = {
+                semesters: JSON.parse(savedData),
+                pinned: pinnedSemesterKey
+            };
+            
+            // UTF-8 安全 Base64 編碼
+            const code = 'COURSE-V3-' + btoa(encodeURIComponent(JSON.stringify(payload)));
+
+            // 寫入剪貼簿
+            navigator.clipboard.writeText(code).then(() => {
+                alert('🎉 課表同步碼已成功複製到剪貼簿！\n請前往目標裝置/模式開啟此頁面，貼上代碼即可同步！');
+            }).catch(() => {
+                // 備用複製機制
+                const tempInput = document.createElement('input');
+                tempInput.value = code;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempInput);
+                alert('🎉 課表同步碼已成功複製到剪貼簿！');
+            });
+        } catch (e) {
+            alert('⚠️ 產生同步碼發生錯誤，請再試一次！');
+        }
     }
 
-    /* ✨ 讀取並還原備份 JSON */
-    function importBackupJSON(event) {
-        const file = event.target.files[0];
-        if (!file) return;
+    /* ✨ [全新] 讀取貼上的代碼並還原 */
+    function applySyncCode() {
+        const inputEl = document.getElementById('syncCodeInput');
+        const code = inputEl ? inputEl.value.trim() : '';
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const parsed = JSON.parse(e.target.result);
-                if (!parsed.semesters) throw new Error('格式不正確');
+        if (!code) return alert('請先在欄位中貼上您的同步碼唷！');
 
-                if (confirm('匯入備份將會覆蓋您目前的課表資料，確定要繼續嗎？')) {
-                    semesters = parsed.semesters || {};
-                    pinnedSemesterKey = parsed.pinnedSemester || null;
-                    
-                    if (parsed.appTitle) {
-                        appTitleName = parsed.appTitle;
-                        document.getElementById('mainAppNameInput').value = appTitleName;
-                        localStorage.setItem('my_app_title_name', appTitleName);
-                    }
+        try {
+            // 解密前置處理
+            const cleanCode = code.replace(/^COURSE-V3-/, '');
+            const decodedString = decodeURIComponent(atob(cleanCode));
+            const payload = JSON.parse(decodedString);
 
-                    saveToLocalStorageSilent();
+            if (!payload || !payload.semesters) throw new Error('資料格式不正確');
 
-                    const keys = Object.keys(semesters);
-                    if (keys.length > 0) {
-                        currentSemesterKey = (pinnedSemesterKey && semesters[pinnedSemesterKey]) ? pinnedSemesterKey : keys[0];
-                        switchSemester(currentSemesterKey);
-                    } else {
-                        courses = [];
-                        updateUI();
-                        renderSemesters();
-                    }
-
-                    alert('🎉 課表資料已順利還原完畢！');
+            if (confirm('同步將會載入這份課表資料，確定要套用嗎？')) {
+                // 寫入 LocalStorage
+                localStorage.setItem('v3_clean_semesters', JSON.stringify(payload.semesters));
+                
+                if (payload.pinned) {
+                    localStorage.setItem('v3_clean_pinned', payload.pinned);
+                } else {
+                    localStorage.removeItem('v3_clean_pinned');
                 }
-            } catch (err) {
-                alert('⚠️ 匯入失敗：這似乎不是有效的排課小助手備份檔案唷！');
+
+                alert('✨ 已完成同步！');
+                closeModal('syncModal');
+                location.reload(); // 刷頁呈現最新課表
             }
-            event.target.value = ''; // 清空選擇器
-        };
-        reader.readAsText(file);
+        } catch (e) {
+            alert('⚠️ 同步碼無效或格式不正確，請確認是否有複製到完整代碼唷！');
+        }
     }
 
     function toggleCourseFormCollapse() {
@@ -1334,7 +1370,6 @@
         }
     }
 
-    /* ✨ 處理新增課程 (含自訂修別判定) */
     function handleAddCourse() {
         if (!currentSemesterKey) return alert('請先建立一個學期課表唷！');
         const name = document.getElementById('cName').value.trim();
@@ -1474,7 +1509,6 @@
         document.getElementById('statGeneralCredits').innerText = `通識 ${generalCredits}`;
     }
 
-    /* ✨ 打開編輯 Modal 時回填自訂修別 */
     function openCourseDetailModal(id, e) {
         if (e.target.tagName === 'INPUT') return;
         currentDetailCourseId = id;
@@ -1487,7 +1521,6 @@
         document.getElementById('editTeacher').value = c.teacher || '';
         document.getElementById('editCredits').value = typeof c.credits === 'number' ? c.credits : (c.periods ? c.periods.length : 0);
         
-        // 判斷是否為預設修別
         const standardTypes = ['必修', '選修', '通識'];
         const currentType = c.courseType || '必修';
         if (standardTypes.includes(currentType)) {
@@ -1507,7 +1540,6 @@
         document.getElementById('detailModal').classList.add('active');
     }
 
-    /* ✨ 儲存編輯詳情 */
     function saveCourseDetails() {
         const c = courses.find(item => item.id === currentDetailCourseId);
         if(c) {
@@ -1745,3 +1777,4 @@
 
 </body>
 </html>
+
