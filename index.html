@@ -12,7 +12,7 @@
     <meta id="appMobileTitle" name="apple-mobile-web-app-title" content="排課表">
     <link id="dynamicAppleIcon" rel="apple-touch-icon" sizes="180x180" href="">
 
-    <!-- 內嵌動態 Manifest，鎖定 App ID 與 start_url -->
+    <!-- 內嵌動態 Manifest -->
     <script>
         (function() {
             const cleanPath = window.location.pathname.replace(/\/index\.html$/, '/');
@@ -40,7 +40,7 @@
         })();
     </script>
 
-    <!-- 引入 Google Fonts 繁體中文全字庫無缺字字型 -->
+    <!-- 引入 Google Fonts 繁體中文無缺字字型 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&family=Yuji+Syuku&family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
@@ -50,7 +50,7 @@
 
     <style>
         :root {
-            /* 經典莫蘭迪主題變數 */
+            /* 莫蘭迪主題變數 */
             --c-blue: #C6A675;
             --c-green: #93B497;
             --c-red: #D97770;
@@ -58,8 +58,9 @@
             --c-submit: #C6A675;
             --c-save: #7BB4A8;
             --c-screenshot: #D9A86C; 
-            --c-pwa: #D8A7B1; /* 溫柔淺藕粉色 */
-            --c-backup: #E8D5B5; /* 溫柔淡可可棕色 */
+            --c-pwa: #D8A7B1;
+            --c-backup: #E8D5B5;
+            --c-ics: #8AA899;
             
             --bg-color: #F7F5F0;
             --card-bg: #EFECE6;
@@ -84,7 +85,9 @@
         }
 
         body { 
-            background-color: var(--bg-color); margin: 0; padding: 16px; color: var(--text-main); 
+            background-color: var(--bg-color); margin: 0; padding: 16px; 
+            padding-bottom: 70px;
+            color: var(--text-main); 
             transition: background 0.3s;
             zoom: var(--global-zoom);
         }
@@ -114,8 +117,9 @@
         .btn-zoom { background: #6B7A82; color: #fff; }
         .btn-pwa { background: var(--c-pwa); color: #5C3A44; }
         .btn-backup { background: var(--c-backup); color: #FFFFFF; }
+        .btn-ics { background: var(--c-ics); color: #FFFFFF; }
 
-        /* 左側學期管理抽屜欄 */
+        /* 左側抽屜欄 */
         .sidebar {
             position: fixed; top: 0; left: -340px; width: 320px; height: 100%;
             background: var(--card-bg); border-right: 2px solid var(--border-color);
@@ -152,7 +156,7 @@
         }
         .semester-card.expanded .semester-card-body { display: block; }
 
-        /* 外觀設定控制面板區塊 */
+        /* 外觀面板 */
         .appearance-panel { display: none; margin-bottom: 16px; }
         .appearance-panel.active { display: block; }
         .setting-section { margin-bottom: 14px; }
@@ -315,15 +319,45 @@
         .modal-overlay.active { display: flex !important; }
         .modal-box {
             background: var(--card-bg); border-radius: 12px; padding: 18px 20px;
-            width: 100%; max-width: 460px; box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+            width: 100%; max-width: 480px; box-shadow: 0 12px 30px rgba(0,0,0,0.18);
             border: 1px solid var(--border-color); max-height: 88vh; overflow-y: auto;
             position: relative; z-index: 10000;
         }
         .modal-header { font-size: 1.05rem; font-weight: bold; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
         .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+        /* 微型懸浮回頂鈕 (FAB) */
+        .fab-scroll-top {
+            position: fixed; bottom: 20px; right: 20px; width: 36px; height: 36px;
+            border-radius: 50%; background: var(--c-submit); color: white; border: none;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.18); font-size: 0.9rem; font-weight: bold;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            z-index: 900; opacity: 0; visibility: hidden; transition: all 0.3s ease;
+        }
+        .fab-scroll-top.show { opacity: 0.6; visibility: visible; }
+        .fab-scroll-top:hover, .fab-scroll-top:active { opacity: 1; transform: scale(1.1); }
+
+        /* 解析預覽卡片 */
+        .parse-item-card {
+            background: var(--card-bg); border-radius: 8px; padding: 8px 10px;
+            margin-bottom: 8px; border: 1.5px solid var(--border-color);
+            display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem;
+        }
+        .parse-item-card.high-confidence { border-color: #93B497; background: #F4F8F4; }
+        .parse-item-card.review-needed { border-color: #FBC870; background: #FFFDF5; }
+        
+        .confidence-badge {
+            display: inline-flex; align-items: center; gap: 3px; font-size: 0.68rem;
+            font-weight: bold; padding: 2px 6px; border-radius: 4px; float: right;
+        }
+        .confidence-badge.green { background: #93B49725; color: #2E5934; border: 1px solid #93B497; }
+        .confidence-badge.yellow { background: #FBC87035; color: #8A5A00; border: 1px solid #D9A136; }
     </style>
 </head>
 <body>
+
+<!-- 微型懸浮回到頂端按鈕 -->
+<button id="fabScrollTop" class="fab-scroll-top" onclick="scrollToTop()" title="回到頂部">▲</button>
 
 <!-- 左側學期管理抽屜欄 -->
 <div class="sidebar" id="sidebar">
@@ -359,6 +393,7 @@
         <button class="btn btn-save" onclick="saveToLocalStorage()">💾 儲存課表</button>
         <button class="btn btn-screenshot" onclick="openExportModal(event)">📱 截圖並分享</button>
         <button class="btn btn-pwa" onclick="openPwaModal(event)">📱 儲存至主畫面</button>
+        <button class="btn btn-ics" onclick="openIcsModal(event)">📅 匯出至日曆</button>
         <button class="btn btn-danger" onclick="deleteSelectedCourses()">🗑️ 刪除所選課程</button>
         <button class="btn btn-appearance" onclick="toggleAppearancePanel()">🎨 外觀設定</button>
         <button class="btn btn-zoom" id="btnZoomToggle" onclick="cycleZoomScale()">🔍 縮放: 100%</button>
@@ -396,10 +431,28 @@
         </div>
 
         <div class="collapsible-body" id="courseFormBody">
+            
+            <!-- 通用智慧解析專區 -->
+            <div style="background: var(--panel-bg); padding: 12px; border-radius: 10px; margin-bottom: 14px; border: 1.5px dashed var(--c-submit);">
+                <div style="font-weight: bold; font-size: 0.9rem; color: var(--c-submit); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                    🧠 通用大專院校課表智慧解析引擎
+                </div>
+                <div style="font-size: 0.78rem; color: var(--text-sub); margin-bottom: 8px; line-height: 1.4;">
+                    貼上選課系統、草稿或文字，系統將自動進行<b>雙層特徵掃描、語意候選評分與一致性驗證</b>！
+                </div>
+                <button type="button" class="btn btn-save" style="width: 100%; padding: 8px; font-size: 0.88rem;" onclick="openPasteModal(event)">
+                    📋 貼上課表文字（智慧解析引擎）
+                </button>
+            </div>
+
+            <div style="font-size: 0.8rem; font-weight: bold; color: var(--text-sub); margin-bottom: 8px; text-align: center;">
+                ── 或手動填寫下方單門課程資料 ──
+            </div>
+
             <div class="form-grid">
                 <div class="form-group">
                     <label for="cName">課程名稱 *</label>
-                    <input type="text" id="cName" required placeholder="例：普通心理學">
+                    <input type="text" id="cName" placeholder="例：普通心理學">
                 </div>
                 <div class="form-group">
                     <label for="cCredits">學分數</label>
@@ -541,7 +594,66 @@
     </div>
 </div>
 
-<!-- 🔍 課程編輯 Modal -->
+<!-- 智慧解析 Modal -->
+<div class="modal-overlay" id="pasteModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span>🧠 智慧課表文字匯入</span>
+            <button class="btn" style="padding:2px 8px; background:#CBD5E1; color:#333;" onclick="closeModal('pasteModal')">✕</button>
+        </div>
+        
+        <div class="form-group" style="margin-bottom:12px;">
+            <label style="font-size:0.8rem; color:var(--text-main);">請貼上課表文字（可全選貼上選課網頁表格）：</label>
+            <textarea id="pasteRawText" rows="6" placeholder="例如：
+心理二 BPY30201 知覺心理學 PSYCHOLOGY OF PERCEPTION 3 必修 陳彥儒 R0410 四 789
+心理三 BPY30101 心理實驗法實驗 LABORATORY FOR METHODS OF PSYCHOLOGICAL EXPERIMENT Ａ組 2 必修 陳彥儒 B602 三 1234
+心理三 BPY38101 諮商會談技術 TECHNIQUES IN COUNSELING 3 選修 陳昱安 R0202 一 E56
+心理四 BPY41001 臨床心理治療實務 PRACTICE OF CLINICAL PSYCHOTHERAPY 2 選修 高振傑 B602 五 56" style="font-size:0.78rem; font-family:monospace; margin-top:4px;"></textarea>
+        </div>
+
+        <div id="pastePreviewArea" style="display:none; background:var(--panel-bg); padding:10px; border-radius:8px; margin-bottom:12px; font-size:0.8rem; max-height:220px; overflow-y:auto; border:1px solid var(--border-color);">
+            <div style="font-weight:bold; color:var(--c-submit); margin-bottom:6px; display:flex; justify-content:space-between;" id="pastePreviewTitle">
+                <span>解析預覽</span>
+            </div>
+            <div id="pastePreviewList"></div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+            <button class="btn btn-save" onclick="runUniversalParser()">🔍 執行智慧解析引擎</button>
+            <button class="btn btn-submit" id="btnConfirmPaste" style="display:none;" onclick="applyPastedCourses()">✨ 全部確認排入課表</button>
+        </div>
+    </div>
+</div>
+
+<!-- .ics 日曆匯出 Modal -->
+<div class="modal-overlay" id="icsModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span>📅 匯出行事曆 (.ics)</span>
+            <button class="btn" style="padding:2px 8px; background:#CBD5E1; color:#333;" onclick="closeModal('icsModal')">✕</button>
+        </div>
+        
+        <div style="font-size:0.8rem; color:var(--text-sub); margin-bottom:12px; line-height:1.5;">
+            系統將自動將課表轉為行事曆事件，<b>連續節次將自動合併</b>，並寫入台灣標準時間（Asia/Taipei）與每週重複規則。
+        </div>
+
+        <div class="form-group" style="margin-bottom:10px;">
+            <label>開學第一週的星期一 (DTSTART)：</label>
+            <input type="date" id="icsStartDate" value="2026-09-14" style="padding:6px 8px;">
+        </div>
+
+        <div class="form-group" style="margin-bottom:14px;">
+            <label>學期結束日期 (UNTIL)：</label>
+            <input type="date" id="icsEndDate" value="2027-01-15" style="padding:6px 8px;">
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-ics" style="width:100%; padding:10px;" onclick="executeExportICS()">⬇️ 下載 .ics 並同步至手機日曆</button>
+        </div>
+    </div>
+</div>
+
+<!-- 課程編輯 Modal -->
 <div class="modal-overlay" id="detailModal">
     <div class="modal-box">
         <div class="modal-header">
@@ -620,7 +732,7 @@
     </div>
 </div>
 
-<!-- 📱 截圖尺寸與名稱詢問 Modal -->
+<!-- 截圖 Modal -->
 <div class="modal-overlay" id="exportModal">
     <div class="modal-box">
         <div class="modal-header">
@@ -647,7 +759,7 @@
     </div>
 </div>
 
-<!-- 📱 儲存至主畫面設定視窗 -->
+<!-- PWA Modal -->
 <div class="modal-overlay" id="pwaModal">
     <div class="modal-box">
         <div class="modal-header">
@@ -663,7 +775,6 @@
         <div class="setting-title" style="color:var(--c-pwa);">2. 選擇喜歡的莫蘭迪桌面圖示：</div>
         <div class="app-icon-grid" id="pwaAppIconGrid"></div>
 
-        <!-- 🌸 小提醒說明卡片 -->
         <div id="pwaTipBox" style="margin-top: 14px; font-size: 0.8rem; color: var(--text-main); line-height: 1.6; background: #FFF0F3; border: 1px solid #FFCCD5; padding: 12px 14px; border-radius: 10px;">
             <div style="font-weight: bold; color: #D63384; font-size: 0.88rem; margin-bottom: 6px;">
                 🌸 小提醒：
@@ -680,7 +791,6 @@
             </div>
         </div>
 
-        <!-- 按鈕組合：一鍵嘗試跳轉 ＋ 複製專用網址 -->
         <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
             <button type="button" onclick="openExternalSafari()" class="btn" style="background: #E08291; color: white; padding: 10px; font-size: 0.9rem; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; box-shadow: 0 2px 8px rgba(224, 130, 145, 0.3);">
                 🔗 嘗試直接開啟 Safari
@@ -697,7 +807,7 @@
     </div>
 </div>
 
-<!-- 🔄 專屬課表同步 Modal -->
+<!-- 同步 Modal -->
 <div class="modal-overlay" id="syncModal">
     <div class="modal-box">
         <div class="modal-header">
@@ -705,7 +815,6 @@
             <button class="btn" style="padding:2px 8px; background:#CBD5E1; color:#333;" onclick="closeModal('syncModal')">✕</button>
         </div>
         
-        <!-- 區塊 A：產生與複製代碼 -->
         <div style="background: var(--panel-bg); padding: 12px; border-radius: 8px; margin-bottom: 14px; border: 1px solid var(--border-color);">
             <div style="font-weight: bold; font-size: 0.85rem; color: var(--text-main); margin-bottom: 4px;">📤 產生當前課表同步碼</div>
             <div style="font-size: 0.75rem; color: var(--text-sub); margin-bottom: 8px;">若要把目前的課表傳到 Safari 或別的手機，請點擊下方按鈕複製代碼：</div>
@@ -715,7 +824,6 @@
             </button>
         </div>
 
-        <!-- 區塊 B：貼上並同步 -->
         <div style="background: var(--panel-bg); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
             <div style="font-weight: bold; font-size: 0.85rem; color: var(--text-main); margin-bottom: 4px;">📥 貼上同步碼還原課表</div>
             <div style="font-size: 0.75rem; color: var(--text-sub); margin-bottom: 8px;">請在下方貼上您複製好的同步碼：</div>
@@ -733,6 +841,21 @@
 <script>
     const PERIODS = ['1', '2', '3', '4', 'E', '5', '6', '7', '8', '9', 'A', 'B'];
     const DAYS = [1, 2, 3, 4, 5, 6, 7];
+
+    const SCU_TIME_MAP = {
+        '1': { start: '08:10', end: '09:00' },
+        '2': { start: '09:10', end: '10:00' },
+        '3': { start: '10:10', end: '11:00' },
+        '4': { start: '11:10', end: '12:00' },
+        'E': { start: '12:10', end: '13:00' },
+        '5': { start: '13:10', end: '14:00' },
+        '6': { start: '14:10', end: '15:00' },
+        '7': { start: '15:10', end: '16:00' },
+        '8': { start: '16:10', end: '17:00' },
+        '9': { start: '17:10', end: '18:00' },
+        'A': { start: '18:30', end: '19:20' },
+        'B': { start: '19:25', end: '20:15' }
+    };
 
     const THEMES = {
         oat: { name: '燕麥棕', bg: '#F7F5F0', card: '#EFECE6', panel: '#E7E3DA', primary: '#C6A675', text: '#4A4238', sub: '#8C8275', border: '#DDD8CD', grid: '#E8E4DA' },
@@ -805,12 +928,29 @@
     let selectedCustomColor = CARD_COLORS[0];
     let editCustomColor = CARD_COLORS[0];
     let appTitleName = '排課小助手';
-    let zoomScales = [1, 0.85, 0.75, 0.5];
+    let zoomScales = [1, 0.85, 0.75, 0.65, 0.5, 1.1];
     let currentZoomIdx = 0;
     let expandedSemesterKey = null;
     let isCourseFormCollapsed = false;
+    let parsedTempCourses = [];
 
-    /* ⚡⚡⚡ 高效精簡 Base64URL 編碼/解碼，大幅壓縮網址長度 ⚡⚡⚡ */
+    /* PWA Service Worker 快取 */
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            const swCode = `
+                const CACHE_NAME = 'timetable-pro-v1';
+                self.addEventListener('install', e => self.skipWaiting());
+                self.addEventListener('activate', e => self.clients.claim());
+                self.addEventListener('fetch', e => {
+                    e.respondWith(caches.match(e.request).then(res => res || fetch(e.request).catch(() => res)));
+                });
+            `;
+            const blob = new Blob([swCode], { type: 'text/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+            navigator.serviceWorker.register(swUrl).catch(err => console.log('SW registration skipped'));
+        });
+    }
+
     function codeEncode(str) {
         return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => {
             return String.fromCharCode('0x' + p1);
@@ -826,24 +966,13 @@
     }
 
     function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
-    function toggleAppearancePanel() { 
-        document.getElementById('appearancePanel').classList.toggle('active'); 
-    }
-    function closeModal(id) { 
-        const el = document.getElementById(id);
-        if(el) el.classList.remove('active'); 
-    }
+    function toggleAppearancePanel() { document.getElementById('appearancePanel').classList.toggle('active'); }
+    function closeModal(id) { const el = document.getElementById(id); if(el) el.classList.remove('active'); }
 
     function toggleCustomTypeInput(selectId, groupId) {
         const selectEl = document.getElementById(selectId);
         const groupEl = document.getElementById(groupId);
-        if (selectEl && groupEl) {
-            if (selectEl.value === '其他') {
-                groupEl.style.display = 'flex';
-            } else {
-                groupEl.style.display = 'none';
-            }
-        }
+        if (selectEl && groupEl) groupEl.style.display = (selectEl.value === '其他') ? 'flex' : 'none';
     }
 
     function openPwaModal(e) {
@@ -860,26 +989,19 @@
         localStorage.setItem('v3_pwa_custom_title', titleVal);
     }
 
-    /* 網址產生小幫手 */
     function buildAutoSyncUrl() {
         const cleanPath = window.location.pathname.replace(/\/index\.html$/, '/');
         let targetUrl = window.location.origin + cleanPath;
-
         const savedData = localStorage.getItem('v3_clean_semesters');
         if (savedData) {
             try {
-                const payload = {
-                    semesters: JSON.parse(savedData),
-                    pinned: pinnedSemesterKey
-                };
-                const code = 'COURSE-V3-' + codeEncode(JSON.stringify(payload));
-                targetUrl += `?autoSync=${encodeURIComponent(code)}`;
+                const payload = { semesters: JSON.parse(savedData), pinned: pinnedSemesterKey };
+                targetUrl += `?autoSync=${encodeURIComponent('COURSE-V3-' + codeEncode(JSON.stringify(payload)))}`;
             } catch(e) {}
         }
         return targetUrl;
     }
 
-    /* 第一重策略：嘗試直接喚醒/跳轉 Safari */
     function openExternalSafari() {
         const targetUrl = buildAutoSyncUrl();
         const safariWindow = window.open(targetUrl, '_blank');
@@ -888,65 +1010,43 @@
         }
     }
 
-    /* 第二重策略：複製帶有資料的網址 */
     function copySafariUrlWithData() {
         const targetUrl = buildAutoSyncUrl();
-
         navigator.clipboard.writeText(targetUrl).then(() => {
             alert('🎉 課表專用網址已成功複製！\n請開啟 Safari 瀏覽器，在網址列「貼上並前往」，課表就會自動載入囉！');
         }).catch(() => {
-            const tempInput = document.createElement('input');
-            tempInput.value = targetUrl;
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            document.execCommand('copy');
-            document.body.removeChild(tempInput);
+            const tempInput = document.createElement('input'); tempInput.value = targetUrl;
+            document.body.appendChild(tempInput); tempInput.select(); document.execCommand('copy'); document.body.removeChild(tempInput);
             alert('🎉 課表專用網址已成功複製！請開啟 Safari 貼上開啟！');
         });
     }
 
-    /* 🚀 Safari 開啟時自動解碼並寫入，無縫 DOM 渲染（免跳白頁 reload） */
     function checkAutoSync() {
         const urlParams = new URLSearchParams(window.location.search);
         const autoCode = urlParams.get('autoSync');
-
         if (autoCode) {
             try {
                 const cleanCode = autoCode.replace(/^COURSE-V3-/, '');
                 const decodedString = codeDecode(cleanCode);
                 const payload = JSON.parse(decodedString);
-
                 if (payload && payload.semesters) {
-                    // 1. 寫入 LocalStorage
                     localStorage.setItem('v3_clean_semesters', JSON.stringify(payload.semesters));
-                    if (payload.pinned) {
-                        localStorage.setItem('v3_clean_pinned', payload.pinned);
-                        pinnedSemesterKey = payload.pinned;
-                    } else {
-                        localStorage.removeItem('v3_clean_pinned');
-                        pinnedSemesterKey = null;
-                    }
+                    pinnedSemesterKey = payload.pinned || null;
+                    if (pinnedSemesterKey) localStorage.setItem('v3_clean_pinned', pinnedSemesterKey);
+                    else localStorage.removeItem('v3_clean_pinned');
 
-                    // 2. 靜默清理網址列的 ?autoSync= 參數
                     const cleanPath = window.location.pathname.replace(/\/index\.html$/, '/');
                     window.history.replaceState(null, '', cleanPath);
 
-                    // 3. ✨ 記憶體資料覆蓋，直接無縫繪製畫面
                     semesters = payload.semesters;
                     const keys = Object.keys(semesters);
-                    if (keys.length > 0) {
-                        currentSemesterKey = (pinnedSemesterKey && semesters[pinnedSemesterKey]) ? pinnedSemesterKey : keys[0];
-                    }
-
+                    if (keys.length > 0) currentSemesterKey = (pinnedSemesterKey && semesters[pinnedSemesterKey]) ? pinnedSemesterKey : keys[0];
                     alert('✨ 課表已成功儲存至 Safari！');
                 }
-            } catch (e) {
-                console.error('自動同步解析失敗：', e);
-            }
+            } catch (e) { console.error('自動同步解析失敗：', e); }
         }
     }
 
-    /* 第三重策略：開啟同步 Modal 手動產生與貼上同步碼 */
     function openSyncModal(e) {
         if (e) e.stopPropagation();
         document.getElementById('syncCodeInput').value = ''; 
@@ -956,83 +1056,52 @@
     function generateAndCopySyncCode() {
         const savedData = localStorage.getItem('v3_clean_semesters');
         if (!savedData) return alert('目前沒有課表資料可以產生同步碼唷！');
-
         try {
-            const payload = {
-                semesters: JSON.parse(savedData),
-                pinned: pinnedSemesterKey
-            };
-            
+            const payload = { semesters: JSON.parse(savedData), pinned: pinnedSemesterKey };
             const code = 'COURSE-V3-' + codeEncode(JSON.stringify(payload));
-
             navigator.clipboard.writeText(code).then(() => {
-                alert('🎉 課表同步碼已成功複製到剪貼簿！\n請前往目標裝置/模式開啟此頁面，貼上代碼即可同步！');
+                alert('🎉 課表同步碼已成功複製到剪貼簿！');
             }).catch(() => {
-                const tempInput = document.createElement('input');
-                tempInput.value = code;
-                document.body.appendChild(tempInput);
-                tempInput.select();
-                document.execCommand('copy');
-                document.body.removeChild(tempInput);
+                const tempInput = document.createElement('input'); tempInput.value = code;
+                document.body.appendChild(tempInput); tempInput.select();
+                document.execCommand('copy'); document.body.removeChild(tempInput);
                 alert('🎉 課表同步碼已成功複製到剪貼簿！');
             });
-        } catch (e) {
-            alert('⚠️ 產生同步碼發生錯誤，請再試一次！');
-        }
+        } catch (e) { alert('⚠️ 產生同步碼發生錯誤！'); }
     }
 
     function applySyncCode() {
         const inputEl = document.getElementById('syncCodeInput');
         const code = inputEl ? inputEl.value.trim() : '';
-
         if (!code) return alert('請先在欄位中貼上您的同步碼唷！');
-
         try {
             const cleanCode = code.replace(/^COURSE-V3-/, '');
             const decodedString = codeDecode(cleanCode);
             const payload = JSON.parse(decodedString);
-
-            if (!payload || !payload.semesters) throw new Error('資料格式不正確');
+            if (!payload || !payload.semesters) throw new Error();
 
             if (confirm('同步將會載入這份課表資料，確定要套用嗎？')) {
                 localStorage.setItem('v3_clean_semesters', JSON.stringify(payload.semesters));
-                
-                if (payload.pinned) {
-                    localStorage.setItem('v3_clean_pinned', payload.pinned);
-                    pinnedSemesterKey = payload.pinned;
-                } else {
-                    localStorage.removeItem('v3_clean_pinned');
-                    pinnedSemesterKey = null;
-                }
+                pinnedSemesterKey = payload.pinned || null;
+                if (pinnedSemesterKey) localStorage.setItem('v3_clean_pinned', pinnedSemesterKey);
+                else localStorage.removeItem('v3_clean_pinned');
 
                 semesters = payload.semesters;
                 const keys = Object.keys(semesters);
-                if (keys.length > 0) {
-                    currentSemesterKey = (pinnedSemesterKey && semesters[pinnedSemesterKey]) ? pinnedSemesterKey : keys[0];
-                }
-
+                if (keys.length > 0) currentSemesterKey = (pinnedSemesterKey && semesters[pinnedSemesterKey]) ? pinnedSemesterKey : keys[0];
                 alert('✨ 已完成同步！');
                 closeModal('syncModal');
-                switchSemester(currentSemesterKey); // 無縫更新 DOM
+                switchSemester(currentSemesterKey);
             }
-        } catch (e) {
-            alert('⚠️ 同步碼無效或格式不正確，請確認是否有複製到完整代碼唷！');
-        }
+        } catch (e) { alert('⚠️ 同步碼無效或格式不正確！'); }
     }
 
     function toggleCourseFormCollapse() {
         const body = document.getElementById('courseFormBody');
         const btn = document.getElementById('courseFormToggleBtn');
         isCourseFormCollapsed = !isCourseFormCollapsed;
-
-        if (isCourseFormCollapsed) {
-            body.classList.add('collapsed');
-            btn.innerText = '展開 ▾';
-        } else {
-            body.classList.remove('collapsed');
-            btn.innerText = '收起 ▴';
-        }
-
+        body.classList.toggle('collapsed', isCourseFormCollapsed);
+        btn.innerText = isCourseFormCollapsed ? '展開 ▾' : '收起 ▴';
         localStorage.setItem('v3_course_form_collapsed', isCourseFormCollapsed ? 'true' : 'false');
     }
 
@@ -1041,18 +1110,15 @@
         const scale = zoomScales[currentZoomIdx];
         document.documentElement.style.setProperty('--global-zoom', scale);
         document.getElementById('btnZoomToggle').innerText = `🔍 縮放: ${Math.round(scale * 100)}%`;
+        localStorage.setItem('v3_saved_zoom_idx', currentZoomIdx);
     }
 
     function toggleConflictBody() {
         const body = document.getElementById('conflictBody');
         const btn = document.getElementById('conflictToggleBtn');
-        if (body.classList.contains('collapsed')) {
-            body.classList.remove('collapsed');
-            btn.innerText = '收起 ▴';
-        } else {
-            body.classList.add('collapsed');
-            btn.innerText = '展開 ▾';
-        }
+        const isCollapsed = body.classList.contains('collapsed');
+        body.classList.toggle('collapsed', !isCollapsed);
+        btn.innerText = !isCollapsed ? '展開 ▾' : '收起 ▴';
     }
 
     function saveAppNameChange() {
@@ -1061,54 +1127,41 @@
     }
 
     function initCardColorPicker() {
-        const container = document.getElementById('cardColorPicker');
-        container.innerHTML = '';
+        const container = document.getElementById('cardColorPicker'); container.innerHTML = '';
         CARD_COLORS.forEach((color, idx) => {
             const dot = document.createElement('div');
             dot.className = `color-dot ${idx === 0 ? 'selected' : ''}`;
             dot.style.backgroundColor = color.border;
             dot.onclick = () => {
                 container.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
-                dot.classList.add('selected');
-                selectedCustomColor = color;
+                dot.classList.add('selected'); selectedCustomColor = color;
             };
             container.appendChild(dot);
         });
     }
 
     function initEditCardColorPicker(selectedColorObj) {
-        const container = document.getElementById('editCardColorPicker');
-        container.innerHTML = '';
+        const container = document.getElementById('editCardColorPicker'); container.innerHTML = '';
         editCustomColor = selectedColorObj || CARD_COLORS[0];
-
         CARD_COLORS.forEach(color => {
             const dot = document.createElement('div');
-            const isMatch = color.border === editCustomColor.border;
-            dot.className = `color-dot ${isMatch ? 'selected' : ''}`;
+            dot.className = `color-dot ${color.border === editCustomColor.border ? 'selected' : ''}`;
             dot.style.backgroundColor = color.border;
             dot.onclick = () => {
                 container.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
-                dot.classList.add('selected');
-                editCustomColor = color;
+                dot.classList.add('selected'); editCustomColor = color;
             };
             container.appendChild(dot);
         });
     }
 
     function generatePngAppleIcon(svgString, callback) {
-        const canvas = document.createElement('canvas');
-        canvas.width = 180;
-        canvas.height = 180;
-        const ctx = canvas.getContext('2d');
-
-        const img = new Image();
-        const svgBlob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
-        const url = URL.createObjectURL(svgBlob);
-
+        const canvas = document.createElement('canvas'); canvas.width = 180; canvas.height = 180;
+        const ctx = canvas.getContext('2d'); const img = new Image();
+        const url = URL.createObjectURL(new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'}));
         img.onload = () => {
             ctx.drawImage(img, 0, 0, 180, 180);
-            const pngDataUrl = canvas.toDataURL('image/png');
-            URL.revokeObjectURL(url);
+            const pngDataUrl = canvas.toDataURL('image/png'); URL.revokeObjectURL(url);
             if (callback) callback(pngDataUrl);
         };
         img.src = url;
@@ -1116,288 +1169,174 @@
 
     function renderAppIconGrid(targetContainerId = 'pwaAppIconGrid') {
         const container = document.getElementById(targetContainerId) || document.getElementById('appIconGrid');
-        if (!container) return;
-        container.innerHTML = '';
-
+        if (!container) return; container.innerHTML = '';
         const savedIconId = localStorage.getItem('v3_selected_app_icon') || 'icon1';
-
         APP_ICONS.forEach(icon => {
-            const isSelected = icon.id === savedIconId;
-
             const card = document.createElement('div');
-            card.className = `app-icon-card ${isSelected ? 'selected' : ''}`;
+            card.className = `app-icon-card ${icon.id === savedIconId ? 'selected' : ''}`;
             card.onclick = () => selectAppIcon(icon);
-
-            card.innerHTML = `
-                <div class="app-icon-preview-box">${icon.svg}</div>
-                <div class="app-icon-title">${icon.title}</div>
-                <div class="app-icon-sub">${icon.sub}</div>
-            `;
+            card.innerHTML = `<div class="app-icon-preview-box">${icon.svg}</div><div class="app-icon-title">${icon.title}</div><div class="app-icon-sub">${icon.sub}</div>`;
             container.appendChild(card);
         });
     }
 
     function selectAppIcon(icon) {
         localStorage.setItem('v3_selected_app_icon', icon.id);
-        
         generatePngAppleIcon(icon.svg, (pngDataUrl) => {
             const linkEl = document.getElementById('dynamicAppleIcon');
             if (linkEl) linkEl.href = pngDataUrl;
         });
-
-        renderAppIconGrid('appIconGrid');
-        renderAppIconGrid('pwaAppIconGrid');
+        renderAppIconGrid('appIconGrid'); renderAppIconGrid('pwaAppIconGrid');
     }
 
     function confirmPwaSetup() {
-        updatePwaTitle();
-        closeModal('pwaModal');
-        alert('✨ 規格與圖示已成功套用！請點擊 iPad/iPhone 頂部或底部的「分享 ➔ 加到主畫面」即可存到桌面囉！');
+        updatePwaTitle(); closeModal('pwaModal');
+        alert('✨ 規格與圖示已成功套用！請點擊 iPad/iPhone 的「分享 ➔ 加到主畫面」即可存到桌面囉！');
     }
 
     function renderMainThemeOptions() {
-        const container = document.getElementById('themeOptions');
-        container.innerHTML = '';
+        const container = document.getElementById('themeOptions'); container.innerHTML = '';
         Object.keys(THEMES).forEach(key => {
-            const t = THEMES[key];
             const card = document.createElement('div');
             card.className = `opt-card ${key === (semesters[currentSemesterKey]?.theme || 'oat') ? 'selected' : ''}`;
-            card.innerText = t.name;
-            card.onclick = () => {
-                setSemesterTheme(key);
-                renderMainThemeOptions();
-            };
+            card.innerText = THEMES[key].name;
+            card.onclick = () => { setSemesterTheme(key); renderMainThemeOptions(); };
             container.appendChild(card);
         });
     }
 
     function saveToLocalStorageSilent() {
         localStorage.setItem('v3_clean_semesters', JSON.stringify(semesters));
-        if (pinnedSemesterKey) {
-            localStorage.setItem('v3_clean_pinned', pinnedSemesterKey);
-        } else {
-            localStorage.removeItem('v3_clean_pinned');
-        }
+        if (pinnedSemesterKey) localStorage.setItem('v3_clean_pinned', pinnedSemesterKey);
+        else localStorage.removeItem('v3_clean_pinned');
     }
 
     function togglePinSemester(semKey) {
-        if (pinnedSemesterKey === semKey) {
-            pinnedSemesterKey = null;
-        } else {
+        if (pinnedSemesterKey === semKey) pinnedSemesterKey = null;
+        else {
             pinnedSemesterKey = semKey;
-            
-            const newSemesters = {};
-            newSemesters[semKey] = semesters[semKey];
-            Object.keys(semesters).forEach(k => {
-                if (k !== semKey) newSemesters[k] = semesters[k];
-            });
+            const newSemesters = {}; newSemesters[semKey] = semesters[semKey];
+            Object.keys(semesters).forEach(k => { if (k !== semKey) newSemesters[k] = semesters[k]; });
             semesters = newSemesters;
         }
-        saveToLocalStorageSilent();
-        renderSemesters();
+        saveToLocalStorageSilent(); renderSemesters();
     }
 
     function moveSemesterIndex(semKey, direction, event) {
         event.stopPropagation();
         if (semKey === pinnedSemesterKey) return;
-
-        const keys = Object.keys(semesters);
-        const idx = keys.indexOf(semKey);
-        if (idx === -1) return;
-
+        const keys = Object.keys(semesters); const idx = keys.indexOf(semKey); if (idx === -1) return;
         const newIdx = idx + direction;
         const minIndex = (pinnedSemesterKey && semesters[pinnedSemesterKey]) ? 1 : 0;
         if (newIdx < minIndex || newIdx >= keys.length) return;
 
-        const targetKey = keys[newIdx];
-        keys[idx] = targetKey;
-        keys[newIdx] = semKey;
-
-        const newSemesters = {};
-        keys.forEach(k => {
-            newSemesters[k] = semesters[k];
-        });
-
-        semesters = newSemesters;
-        renderSemesters();
-        saveToLocalStorageSilent();
+        const targetKey = keys[newIdx]; keys[idx] = targetKey; keys[newIdx] = semKey;
+        const newSemesters = {}; keys.forEach(k => newSemesters[k] = semesters[k]);
+        semesters = newSemesters; renderSemesters(); saveToLocalStorageSilent();
     }
 
     function renderSemesters() {
-        const container = document.getElementById('semesterList');
-        container.innerHTML = '';
-        
+        const container = document.getElementById('semesterList'); container.innerHTML = '';
         const keys = Object.keys(semesters);
-        
         if (keys.length === 0) {
-            container.innerHTML = `<div style="text-align:center; padding: 20px; font-size:0.85rem; color:var(--text-sub);">目前還沒有任何學期課表唷！<br>請在上方建立第一個學期～</div>`;
-            document.getElementById('currentSemesterTitleDisplay').innerText = '未命名學期';
-            return;
+            container.innerHTML = `<div style="text-align:center; padding:20px; font-size:0.85rem; color:var(--text-sub);">目前還沒有任何學期課表唷！</div>`;
+            document.getElementById('currentSemesterTitleDisplay').innerText = '未命名學期'; return;
         }
-
         const minMoveIndex = (pinnedSemesterKey && semesters[pinnedSemesterKey]) ? 1 : 0;
 
         keys.forEach((key, index) => {
-            const isCurrent = (key === currentSemesterKey);
-            const isPinned = (key === pinnedSemesterKey);
-            const isExpanded = (key === expandedSemesterKey);
-            const currentThemeKey = semesters[key]?.theme || 'oat';
-            const themeObj = THEMES[currentThemeKey] || THEMES['oat'];
-
+            const isCurrent = (key === currentSemesterKey), isPinned = (key === pinnedSemesterKey), isExpanded = (key === expandedSemesterKey);
+            const currentThemeKey = semesters[key]?.theme || 'oat'; const themeObj = THEMES[currentThemeKey] || THEMES['oat'];
             const card = document.createElement('div');
             card.className = `semester-card ${isCurrent ? 'active' : ''} ${isPinned ? 'pinned' : ''} ${isExpanded ? 'expanded' : ''}`;
-
             card.ondblclick = () => togglePinSemester(key);
 
             let themeButtonsHTML = '';
             Object.keys(THEMES).forEach(tKey => {
-                themeButtonsHTML += `
-                    <div class="opt-card ${tKey === currentThemeKey ? 'selected' : ''}" 
-                         style="font-size: 0.72rem; padding: 4px;"
-                         onclick="event.stopPropagation(); setSpecificSemesterTheme('${key}', '${tKey}')">
-                        ${THEMES[tKey].name}
-                    </div>
-                `;
+                themeButtonsHTML += `<div class="opt-card ${tKey === currentThemeKey ? 'selected' : ''}" style="font-size: 0.72rem; padding: 4px;" onclick="event.stopPropagation(); setSpecificSemesterTheme('${key}', '${tKey}')">${THEMES[tKey].name}</div>`;
             });
 
-            let moveButtonsHTML = '';
-            if (!isPinned) {
-                moveButtonsHTML = `
-                    <div class="move-btn-group" onclick="event.stopPropagation()">
-                        <button class="btn-move" onclick="moveSemesterIndex('${key}', -1, event)" ${index <= minMoveIndex ? 'disabled' : ''}>▲</button>
-                        <button class="btn-move" onclick="moveSemesterIndex('${key}', 1, event)" ${index === keys.length - 1 ? 'disabled' : ''}>▼</button>
-                    </div>
-                `;
-            }
+            let moveButtonsHTML = !isPinned ? `<div class="move-btn-group" onclick="event.stopPropagation()"><button class="btn-move" onclick="moveSemesterIndex('${key}', -1, event)" ${index <= minMoveIndex ? 'disabled' : ''}>▲</button><button class="btn-move" onclick="moveSemesterIndex('${key}', 1, event)" ${index === keys.length - 1 ? 'disabled' : ''}>▼</button></div>` : '';
 
             card.innerHTML = `
                 <div class="semester-card-header" onclick="toggleSemesterAccordion('${key}')">
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <span>${key}</span>
-                        ${isPinned ? '<span style="font-size:0.85rem;">📌</span>' : ''}
-                    </div>
-                    <div style="display:flex; align-items:center; gap:4px;">
-                        ${moveButtonsHTML}
-                        <span style="font-size: 0.8rem; opacity: 0.7; margin-left: 4px;">${isExpanded ? '▴' : '▾'}</span>
-                    </div>
+                    <div style="display:flex; align-items:center; gap:6px;"><span>${key}</span>${isPinned ? '<span>📌</span>' : ''}</div>
+                    <div style="display:flex; align-items:center; gap:4px;">${moveButtonsHTML}<span style="font-size:0.8rem; opacity:0.7;">${isExpanded ? '▴' : '▾'}</span></div>
                 </div>
                 <div class="semester-card-body" style="background: ${themeObj.card}; border-top-color: ${themeObj.border};">
-                    <div class="form-group" style="margin-bottom: 8px;">
+                    <div class="form-group" style="margin-bottom:8px;">
                         <label style="font-size:0.75rem;">修改學期名稱：</label>
-                        <input type="text" id="input-sem-name-${key}" value="${key}" style="padding: 4px 8px; font-size: 0.8rem;" onclick="event.stopPropagation()">
-                        <button class="btn btn-save" style="padding: 4px; font-size: 0.75rem; margin-top: 4px; background:${themeObj.primary};" onclick="event.stopPropagation(); renameSemester('${key}')">更新學期名稱</button>
+                        <input type="text" id="input-sem-name-${key}" value="${key}" style="padding:4px 8px; font-size:0.8rem;" onclick="event.stopPropagation()">
+                        <button class="btn btn-save" style="padding:4px; font-size:0.75rem; margin-top:4px; background:${themeObj.primary};" onclick="event.stopPropagation(); renameSemester('${key}')">更新學期名稱</button>
                     </div>
-
-                    <div style="font-size:0.75rem; font-weight:bold; margin-bottom: 4px;">學期配色風格 (即時預覽)：</div>
-                    <div class="option-cards" style="grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 10px;">
-                        ${themeButtonsHTML}
-                    </div>
-
-                    ${!isCurrent ? `<button class="btn btn-submit" style="width:100%; padding: 6px; font-size:0.8rem; background:${themeObj.primary};" onclick="event.stopPropagation(); switchSemesterDirect('${key}')">切換至此學期</button>` : `<div style="text-align:center; font-size:0.75rem; color:${themeObj.primary}; font-weight:bold;">★ 當前使用中學期</div>`}
-
-                    ${Object.keys(semesters).length > 1 ? `<button class="btn btn-danger" style="width:100%; padding: 4px; font-size:0.75rem; margin-top:6px;" onclick="event.stopPropagation(); deleteSemester('${key}')">移除此學期</button>` : ''}
+                    <div style="font-size:0.75rem; font-weight:bold; margin-bottom:4px;">學期配色風格：</div>
+                    <div class="option-cards" style="grid-template-columns: repeat(4, 1fr); gap:4px; margin-bottom:10px;">${themeButtonsHTML}</div>
+                    ${!isCurrent ? `<button class="btn btn-submit" style="width:100%; padding:6px; font-size:0.8rem; background:${themeObj.primary};" onclick="event.stopPropagation(); switchSemesterDirect('${key}')">切換至此學期</button>` : `<div style="text-align:center; font-size:0.75rem; color:${themeObj.primary}; font-weight:bold;">★ 當前使用中學期</div>`}
+                    ${Object.keys(semesters).length > 1 ? `<button class="btn btn-danger" style="width:100%; padding:4px; font-size:0.75rem; margin-top:6px;" onclick="event.stopPropagation(); deleteSemester('${key}')">移除此學期</button>` : ''}
                 </div>
             `;
             container.appendChild(card);
         });
 
-        document.getElementById('currentSemesterTitleDisplay').innerText = currentSemesterKey ? currentSemesterKey : '未命名學期';
+        document.getElementById('currentSemesterTitleDisplay').innerText = currentSemesterKey || '未命名學期';
         renderMainThemeOptions();
     }
 
-    function switchSemesterDirect(key) {
-        switchSemester(key);
-        toggleSidebar();
-    }
-
-    function toggleSemesterAccordion(key) {
-        expandedSemesterKey = (expandedSemesterKey === key) ? null : key;
-        renderSemesters();
-    }
-
+    function switchSemesterDirect(key) { switchSemester(key); toggleSidebar(); }
+    function toggleSemesterAccordion(key) { expandedSemesterKey = (expandedSemesterKey === key) ? null : key; renderSemesters(); }
+    
     function setSpecificSemesterTheme(semKey, themeKey) {
         if (semesters[semKey]) {
             semesters[semKey].theme = themeKey;
-            if (semKey === currentSemesterKey) {
-                setTheme(themeKey);
-            }
-            saveToLocalStorageSilent();
-            renderSemesters();
+            if (semKey === currentSemesterKey) setTheme(themeKey);
+            saveToLocalStorageSilent(); renderSemesters();
         }
     }
 
     function renameSemester(oldKey) {
         const inputEl = document.getElementById(`input-sem-name-${oldKey}`);
         const newTitle = inputEl ? inputEl.value.trim() : '';
-        if(!newTitle) return alert('學期名稱不能留白唷！');
-        if(newTitle === oldKey) return;
+        if(!newTitle || newTitle === oldKey) return;
         if(semesters[newTitle]) return alert('已經有同名的學期囉！');
 
         const newSemesters = {};
-        Object.keys(semesters).forEach(k => {
-            if (k === oldKey) newSemesters[newTitle] = semesters[oldKey];
-            else newSemesters[k] = semesters[k];
-        });
-
+        Object.keys(semesters).forEach(k => { newSemesters[k === oldKey ? newTitle : k] = semesters[k]; });
         semesters = newSemesters;
         if (currentSemesterKey === oldKey) currentSemesterKey = newTitle;
-        if (pinnedSemesterKey === oldKey) {
-            pinnedSemesterKey = newTitle;
-            localStorage.setItem('v3_clean_pinned', newTitle);
-        }
+        if (pinnedSemesterKey === oldKey) { pinnedSemesterKey = newTitle; localStorage.setItem('v3_clean_pinned', newTitle); }
         if (expandedSemesterKey === oldKey) expandedSemesterKey = newTitle;
-
-        renderSemesters();
-        saveToLocalStorageSilent();
+        renderSemesters(); saveToLocalStorageSilent();
     }
 
     function setSemesterTheme(themeKey) {
         if (semesters[currentSemesterKey]) {
             semesters[currentSemesterKey].theme = themeKey;
-            setTheme(themeKey);
-            renderSemesters();
+            setTheme(themeKey); renderSemesters();
         }
     }
 
     function addSemester() {
-        const input = document.getElementById('newSemesterName');
-        const name = input.value.trim();
-        if (!name) return alert('請填寫新學期的名字唷！');
-        if (semesters[name]) return alert('這個學期已經建立過了唷！');
-        semesters[name] = { courses: [], theme: 'oat' };
-        input.value = '';
-        expandedSemesterKey = name;
-        switchSemester(name);
+        const input = document.getElementById('newSemesterName'); const name = input.value.trim();
+        if (!name || semesters[name]) return alert('請填寫有效的學期名字唷！');
+        semesters[name] = { courses: [], theme: 'oat' }; input.value = '';
+        expandedSemesterKey = name; switchSemester(name);
     }
 
     function switchSemester(key) {
         currentSemesterKey = key;
         const semData = semesters[key] || { courses: [], theme: 'oat' };
         courses = Array.isArray(semData) ? semData : (semData.courses || []);
-        
         if (semData.theme) setTheme(semData.theme);
-
-        history = []; historyIndex = -1;
-        recordState();
-        renderSemesters();
-        updateUI();
+        history = []; historyIndex = -1; recordState(); renderSemesters(); updateUI();
     }
 
     function deleteSemester(key) {
         if (confirm(`確定要刪除「${key}」學期嗎？`)) {
             delete semesters[key];
-            if (pinnedSemesterKey === key) {
-                pinnedSemesterKey = null;
-                localStorage.removeItem('v3_clean_pinned');
-            }
+            if (pinnedSemesterKey === key) { pinnedSemesterKey = null; localStorage.removeItem('v3_clean_pinned'); }
             currentSemesterKey = Object.keys(semesters)[0] || '';
-            if (currentSemesterKey) {
-                switchSemester(currentSemesterKey);
-            } else {
-                courses = [];
-                updateUI();
-                renderSemesters();
-            }
+            if (currentSemesterKey) switchSemester(currentSemesterKey);
+            else { courses = []; updateUI(); renderSemesters(); }
             saveToLocalStorageSilent();
         }
     }
@@ -1407,16 +1346,11 @@
             document.querySelectorAll('#themeOptions .opt-card').forEach(c => c.classList.remove('selected'));
             el.classList.add('selected');
         }
-        const t = THEMES[themeKey] || THEMES['oat'];
-        const root = document.documentElement;
-        root.style.setProperty('--bg-color', t.bg);
-        root.style.setProperty('--card-bg', t.card);
-        root.style.setProperty('--panel-bg', t.panel);
-        root.style.setProperty('--c-submit', t.primary);
-        root.style.setProperty('--c-blue', t.primary);
-        root.style.setProperty('--text-main', t.text);
-        root.style.setProperty('--text-sub', t.sub);
-        root.style.setProperty('--border-color', t.border);
+        const t = THEMES[themeKey] || THEMES['oat']; const root = document.documentElement;
+        root.style.setProperty('--bg-color', t.bg); root.style.setProperty('--card-bg', t.card);
+        root.style.setProperty('--panel-bg', t.panel); root.style.setProperty('--c-submit', t.primary);
+        root.style.setProperty('--c-blue', t.primary); root.style.setProperty('--text-main', t.text);
+        root.style.setProperty('--text-sub', t.sub); root.style.setProperty('--border-color', t.border);
         root.style.setProperty('--grid-border', t.grid);
     }
 
@@ -1430,18 +1364,12 @@
 
     function recordState() {
         if (!currentSemesterKey) return;
-        history = history.slice(0, historyIndex + 1);
-        history.push(JSON.stringify(courses));
-        historyIndex++;
+        history = history.slice(0, historyIndex + 1); history.push(JSON.stringify(courses)); historyIndex++;
         if (semesters[currentSemesterKey]) {
-            if (Array.isArray(semesters[currentSemesterKey])) {
-                semesters[currentSemesterKey] = { courses: courses, theme: 'oat' };
-            } else {
-                semesters[currentSemesterKey].courses = courses;
-            }
+            if (Array.isArray(semesters[currentSemesterKey])) semesters[currentSemesterKey] = { courses: courses, theme: 'oat' };
+            else semesters[currentSemesterKey].courses = courses;
         }
-        updateHistoryButtons();
-        saveToLocalStorageSilent();
+        updateHistoryButtons(); saveToLocalStorageSilent();
     }
 
     function updateHistoryButtons() {
@@ -1451,68 +1379,51 @@
 
     function undo() {
         if (historyIndex > 0) {
-            historyIndex--;
-            courses = JSON.parse(history[historyIndex]);
+            historyIndex--; courses = JSON.parse(history[historyIndex]);
             if (semesters[currentSemesterKey]) semesters[currentSemesterKey].courses = courses;
-            updateUI(); updateHistoryButtons();
-            saveToLocalStorageSilent();
+            updateUI(); updateHistoryButtons(); saveToLocalStorageSilent();
         }
     }
 
     function redo() {
         if (historyIndex < history.length - 1) {
-            historyIndex++;
-            courses = JSON.parse(history[historyIndex]);
+            historyIndex++; courses = JSON.parse(history[historyIndex]);
             if (semesters[currentSemesterKey]) semesters[currentSemesterKey].courses = courses;
-            updateUI(); updateHistoryButtons();
-            saveToLocalStorageSilent();
+            updateUI(); updateHistoryButtons(); saveToLocalStorageSilent();
         }
     }
 
     function handleAddCourse() {
         if (!currentSemesterKey) return alert('請先建立一個學期課表唷！');
-        const name = document.getElementById('cName').value.trim();
-        if (!name) return alert('請填寫課程名稱唷！');
+        const name = document.getElementById('cName').value.trim(); if (!name) return alert('請填寫課程名稱唷！');
         const selectedPeriods = Array.from(document.querySelectorAll('input[name="periods"]:checked')).map(el => el.value);
         if (selectedPeriods.length === 0) return alert('請至少勾選一個上課節次唷！');
 
         const inputCredits = document.getElementById('cCredits').value.trim();
         const credits = inputCredits !== '' ? parseFloat(inputCredits) : selectedPeriods.length;
-        
         let courseType = document.getElementById('cType').value;
         if (courseType === '其他') {
             const customVal = document.getElementById('cCustomType').value.trim();
             courseType = customVal !== '' ? customVal : '其他';
         }
 
-        const newCourse = {
-            id: Date.now().toString(),
-            name: name,
-            code: document.getElementById('cCode').value.trim(),
+        courses.push({
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+            name: name, code: document.getElementById('cCode').value.trim(),
             teacher: document.getElementById('cTeacher').value.trim(),
             room: document.getElementById('cRoom').value.trim(),
             day: parseInt(document.getElementById('cDay').value),
             weekType: document.getElementById('cWeekType').value,
             borderStyle: document.getElementById('cBorderStyle').value,
-            customColor: selectedCustomColor,
-            periods: selectedPeriods,
-            credits: credits,
-            courseType: courseType,
-            url: '', notes: ''
-        };
+            customColor: selectedCustomColor, periods: selectedPeriods,
+            credits: credits, courseType: courseType, url: '', notes: ''
+        });
 
-        courses.push(newCourse);
-        recordState();
-        updateUI();
-
-        document.getElementById('cName').value = '';
-        document.getElementById('cCode').value = '';
-        document.getElementById('cTeacher').value = '';
-        document.getElementById('cRoom').value = '';
-        document.getElementById('cCredits').value = '';
-        document.getElementById('cType').value = '必修';
-        document.getElementById('cCustomType').value = '';
-        toggleCustomTypeInput('cType', 'cCustomTypeGroup');
+        recordState(); updateUI();
+        document.getElementById('cName').value = ''; document.getElementById('cCode').value = '';
+        document.getElementById('cTeacher').value = ''; document.getElementById('cRoom').value = '';
+        document.getElementById('cCredits').value = ''; document.getElementById('cType').value = '必修';
+        document.getElementById('cCustomType').value = ''; toggleCustomTypeInput('cType', 'cCustomTypeGroup');
         document.querySelectorAll('input[name="periods"]').forEach(cb => cb.checked = false);
     }
 
@@ -1523,8 +1434,7 @@
 
     function updateUI() {
         PERIODS.forEach(p => DAYS.forEach(d => {
-            const el = document.getElementById(`cell-${d}-${p}`);
-            if(el) el.innerHTML = '';
+            const el = document.getElementById(`cell-${d}-${p}`); if(el) el.innerHTML = '';
         }));
 
         const gridMap = {};
@@ -1538,8 +1448,7 @@
 
         Object.keys(gridMap).forEach(key => {
             const [day, period] = key.split('-');
-            const cell = document.getElementById(`cell-${day}-${period}`);
-            if(!cell) return;
+            const cell = document.getElementById(`cell-${day}-${period}`); if(!cell) return;
             const cellCourses = gridMap[key];
 
             cellCourses.forEach((c, idx) => {
@@ -1561,10 +1470,8 @@
                 else if (c.borderStyle === 'dashed') borderCSS = 'border: 1.5px dashed ' + color.border + ';';
                 else if (c.borderStyle === 'none') borderCSS = 'border: none;';
 
-                const cardHTML = `
-                    <div class="course-item" 
-                         style="background: ${color.bg}; ${borderCSS}"
-                         onclick="openCourseDetailModal('${c.id}', event)">
+                cell.innerHTML += `
+                    <div class="course-item" style="background: ${color.bg}; ${borderCSS}" onclick="openCourseDetailModal('${c.id}', event)">
                         <div class="course-header">
                             <div class="course-title-wrap">
                                 <span class="course-title">${c.name}</span>
@@ -1576,31 +1483,22 @@
                         <div><span class="badge">${c.courseType || '必修'}</span> <span class="badge">${c.weekType}</span></div>
                     </div>
                 `;
-                cell.innerHTML += cardHTML;
             });
         });
 
-        calculateStats();
-        checkConflicts(gridMap);
+        calculateStats(); checkConflicts(gridMap);
     }
 
     function calculateStats() {
-        let totalPeriods = 0;
-        let totalCredits = 0;
-        let requiredCredits = 0;
-        let electiveCredits = 0;
-        let generalCredits = 0;
-
+        let totalPeriods = 0, totalCredits = 0, requiredCredits = 0, electiveCredits = 0, generalCredits = 0;
         courses.forEach(c => {
             totalPeriods += c.periods ? c.periods.length : 0;
             const cred = typeof c.credits === 'number' ? c.credits : (c.periods ? c.periods.length : 0);
             totalCredits += cred;
-
             if (c.courseType === '必修') requiredCredits += cred;
             else if (c.courseType === '選修') electiveCredits += cred;
             else if (c.courseType === '通識') generalCredits += cred;
         });
-
         document.getElementById('statTotalPeriods').innerText = totalPeriods;
         document.getElementById('statTotalCredits').innerText = totalCredits;
         document.getElementById('statRequiredCredits').innerText = `必修 ${requiredCredits}`;
@@ -1610,9 +1508,7 @@
 
     function openCourseDetailModal(id, e) {
         if (e.target.tagName === 'INPUT') return;
-        currentDetailCourseId = id;
-        const c = courses.find(item => item.id === id);
-        if(!c) return;
+        currentDetailCourseId = id; const c = courses.find(item => item.id === id); if(!c) return;
 
         document.getElementById('editName').value = c.name || '';
         document.getElementById('editRoom').value = c.room || '';
@@ -1620,8 +1516,7 @@
         document.getElementById('editTeacher').value = c.teacher || '';
         document.getElementById('editCredits').value = typeof c.credits === 'number' ? c.credits : (c.periods ? c.periods.length : 0);
         
-        const standardTypes = ['必修', '選修', '通識'];
-        const currentType = c.courseType || '必修';
+        const standardTypes = ['必修', '選修', '通識']; const currentType = c.courseType || '必修';
         if (standardTypes.includes(currentType)) {
             document.getElementById('editType').value = currentType;
             document.getElementById('editCustomType').value = '';
@@ -1634,7 +1529,6 @@
         document.getElementById('editBorderStyle').value = c.borderStyle || 'solid';
         document.getElementById('detailUrl').value = c.url || '';
         document.getElementById('detailNotes').value = c.notes || '';
-
         initEditCardColorPicker(c.customColor);
         document.getElementById('detailModal').classList.add('active');
     }
@@ -1644,43 +1538,31 @@
         if(c) {
             const newName = document.getElementById('editName').value.trim();
             if(!newName) return alert('課程名稱不能留白唷！');
-
-            c.name = newName;
-            c.room = document.getElementById('editRoom').value.trim();
+            c.name = newName; c.room = document.getElementById('editRoom').value.trim();
             c.code = document.getElementById('editCode').value.trim();
             c.teacher = document.getElementById('editTeacher').value.trim();
-            
             const credVal = document.getElementById('editCredits').value.trim();
             c.credits = credVal !== '' ? parseFloat(credVal) : (c.periods ? c.periods.length : 0);
-            
             let courseType = document.getElementById('editType').value;
             if (courseType === '其他') {
                 const customVal = document.getElementById('editCustomType').value.trim();
                 courseType = customVal !== '' ? customVal : '其他';
             }
-            c.courseType = courseType;
-
-            c.borderStyle = document.getElementById('editBorderStyle').value;
-            c.customColor = editCustomColor;
-
-            c.url = document.getElementById('detailUrl').value.trim();
+            c.courseType = courseType; c.borderStyle = document.getElementById('editBorderStyle').value;
+            c.customColor = editCustomColor; c.url = document.getElementById('detailUrl').value.trim();
             c.notes = document.getElementById('detailNotes').value.trim();
-
-            recordState();
-            updateUI();
+            recordState(); updateUI();
         }
         closeModal('detailModal');
     }
 
     function openCourseUrl() {
         const url = document.getElementById('detailUrl').value.trim();
-        if (url) window.open(url, '_blank');
-        else alert('尚未輸入網址連結唷！');
+        if (url) window.open(url, '_blank'); else alert('尚未輸入網址連結唷！');
     }
 
     function toggleCourseSelect(id, isChecked) {
-        if (isChecked) selectedCourseCodes.add(id);
-        else selectedCourseCodes.delete(id);
+        if (isChecked) selectedCourseCodes.add(id); else selectedCourseCodes.delete(id);
         updateUI();
     }
 
@@ -1688,24 +1570,16 @@
         if (selectedCourseCodes.size === 0) return alert('請先勾選想要移除的課程唷！');
         if (confirm(`確定要將選取的 ${selectedCourseCodes.size} 門課程整堂刪除嗎？`)) {
             courses = courses.filter(c => !selectedCourseCodes.has(c.id));
-            selectedCourseCodes.clear();
-            recordState(); 
-            updateUI();
+            selectedCourseCodes.clear(); recordState(); updateUI();
         }
     }
 
-    function deleteCourseById(id) {
-        courses = courses.filter(c => c.id !== id);
-        recordState(); 
-        updateUI();
-    }
+    function deleteCourseById(id) { courses = courses.filter(c => c.id !== id); recordState(); updateUI(); }
 
     function checkConflicts(gridMap) {
         const conflictBox = document.getElementById('conflictBox');
-        const conflictList = document.getElementById('conflictList');
-        conflictList.innerHTML = '';
-        let hasConflict = false;
-        const dayNames = ['', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
+        const conflictList = document.getElementById('conflictList'); conflictList.innerHTML = '';
+        let hasConflict = false; const dayNames = ['', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
 
         Object.keys(gridMap).forEach(key => {
             const list = gridMap[key];
@@ -1714,35 +1588,19 @@
                 for (let i = 0; i < list.length; i++) {
                     for (let j = i + 1; j < list.length; j++) {
                         if (isConflict(list[i], list[j])) {
-                            conflictingCourses.add(list[i]);
-                            conflictingCourses.add(list[j]);
+                            conflictingCourses.add(list[i]); conflictingCourses.add(list[j]);
                         }
                     }
                 }
 
                 if (conflictingCourses.size > 0) {
-                    hasConflict = true;
-                    const [day, period] = key.split('-');
-
-                    let groupHTML = `
-                        <div class="conflict-group">
-                            <div class="conflict-group-title">📌 ${dayNames[day]} 第 ${period} 節 發生衝堂：</div>
-                    `;
-
+                    hasConflict = true; const [day, period] = key.split('-');
+                    let groupHTML = `<div class="conflict-group"><div class="conflict-group-title">📌 ${dayNames[day]} 第 ${period} 節 發生衝堂：</div>`;
                     conflictingCourses.forEach(c => {
-                        let detail = c.teacher ? `${c.teacher}` : '';
-                        if(c.room) detail += ` (${c.room})`;
-
-                        groupHTML += `
-                            <div class="conflict-row-item">
-                                <span><strong>${c.name}</strong> ${c.code ? `(${c.code})` : ''} ${detail} [<b style="color: var(--c-red);">${c.weekType}</b>]</span>
-                                <button class="btn btn-danger" style="padding: 2px 8px; font-size: 0.72rem;" onclick="deleteCourseById('${c.id}')">移除此課</button>
-                            </div>
-                        `;
+                        let detail = c.teacher ? `${c.teacher}` : ''; if(c.room) detail += ` (${c.room})`;
+                        groupHTML += `<div class="conflict-row-item"><span><strong>${c.name}</strong> ${c.code ? `(${c.code})` : ''} ${detail} [<b style="color: var(--c-red);">${c.weekType}</b>]</span><button class="btn btn-danger" style="padding: 2px 8px; font-size: 0.72rem;" onclick="deleteCourseById('${c.id}')">移除此課</button></div>`;
                     });
-
-                    groupHTML += `</div>`;
-                    conflictList.innerHTML += groupHTML;
+                    groupHTML += `</div>`; conflictList.innerHTML += groupHTML;
                 }
             }
         });
@@ -1751,21 +1609,15 @@
             conflictBox.style.display = 'block';
             document.getElementById('conflictBody').classList.remove('collapsed');
             document.getElementById('conflictToggleBtn').innerText = '收起 ▴';
-        } else {
-            conflictBox.style.display = 'none';
-        }
+        } else conflictBox.style.display = 'none';
     }
 
-    function saveToLocalStorage() {
-        saveToLocalStorageSilent();
-        alert('課表資料已幫你成功儲存至瀏覽器囉！');
-    }
+    function saveToLocalStorage() { saveToLocalStorageSilent(); alert('課表資料已幫你成功儲存至瀏覽器囉！'); }
 
     function openExportModal(e) {
         if (e) e.stopPropagation();
         document.getElementById('exportScheduleName').value = currentSemesterKey || '我的學期課表';
-        const modal = document.getElementById('exportModal');
-        if (modal) modal.classList.add('active');
+        const modal = document.getElementById('exportModal'); if (modal) modal.classList.add('active');
     }
 
     function selectExportSize(ratio, el) {
@@ -1777,14 +1629,11 @@
     function executeExport() {
         const customName = document.getElementById('exportScheduleName').value.trim() || '我的學期課表';
         closeModal('exportModal');
-
         const titleBox = document.getElementById('screenshotTitleBox');
         const mainTitle = document.getElementById('screenshotMainTitle');
         const target = document.getElementById('scheduleTableCard');
 
-        mainTitle.innerText = customName;
-        titleBox.style.display = 'block';
-
+        mainTitle.innerText = customName; titleBox.style.display = 'block';
         const checkboxes = document.querySelectorAll('.course-checkbox');
         checkboxes.forEach(cb => cb.style.display = 'none');
 
@@ -1793,40 +1642,442 @@
         else if (selectedExportRatio === 'ipad') target.style.padding = '24px 30px';
 
         html2canvas(target, {
-            scale: 2,
-            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--card-bg').trim(),
-            useCORS: true
+            scale: 2, backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--card-bg').trim(), useCORS: true
         }).then(canvas => {
             checkboxes.forEach(cb => cb.style.display = 'inline-block');
-            titleBox.style.display = 'none';
-            target.style.padding = origPadding;
-
+            titleBox.style.display = 'none'; target.style.padding = origPadding;
             const link = document.createElement('a');
-            link.download = `${customName}_課表截圖.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+            link.download = `${customName}_課表截圖.png`; link.href = canvas.toDataURL('image/png'); link.click();
         }).catch(() => {
             checkboxes.forEach(cb => cb.style.display = 'inline-block');
-            titleBox.style.display = 'none';
-            target.style.padding = origPadding;
+            titleBox.style.display = 'none'; target.style.padding = origPadding;
             alert('圖片繪製失敗，請再試一次唷！');
         });
     }
 
-    /* 🧼 乾淨俐落的頁面初始化（無縫載入與繪製） */
-    window.onload = () => {
-        // 第一/二重：優先檢查網址是否有攜帶 ?autoSync=... 自動同步參數
-        checkAutoSync();
+    /* ============================================================
+       🚀 Universal Course Schedule Parser (通用智慧解析引擎)
+    ============================================================ */
 
-        initCardColorPicker();
-        
+    function normalizeText(text) {
+        return text.replace(/\r/g, "").replace(/\u00A0/g, " ").replace(/[　\t]+/g, " ").replace(/\s+/g, " ").trim();
+    }
+
+    function normalizeFullWidth(text) {
+        return text.replace(/[Ａ-Ｚａ-ｚ０-９]/g, char => String.fromCharCode(char.charCodeAt(0) - 0xFEE0)).replace(/　/g, " ").trim();
+    }
+
+    const DAY_PATTERN = /^(?:星期|週|周)?([一二三四五六日天])$/;
+    const ROOM_PATTERN = /^(?:[A-ZＡ-Ｚ]\s*\d{2,5}|Room\s*\w+|教室|共同教室|電腦教室)/i;
+    const COURSE_CODE_PATTERN = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9-]{4,15}$/;
+    const GROUP_PATTERN = /^(?:[A-ZＡ-Ｚ]\s*組|第[一二三四五六七八九十\d]+組|Group\s*[A-Z0-9]+)$/i;
+    const COURSE_TYPE_PATTERN = /^(必修|選修|通識|核心|必選|選修科目|必修科目)$/;
+    const WEEK_PATTERN = /^(單週|雙週|全週|每週|隔週)$/;
+    const CREDIT_PATTERN = /^\d+(?:\.\d+)?$/;
+
+    function looksLikePeriod(token) {
+        token = normalizeFullWidth(token).toUpperCase();
+        if (!/^[1-9A-E]+$/.test(token)) return false;
+        if (token.length === 1) return false;
+        return token.length <= 8;
+    }
+
+    function isChinese(token) { return /^[\u4e00-\u9fff]{2,20}$/.test(token); }
+    function isEnglish(token) { return /^[A-Za-z][A-Za-z0-9 ,.'&()\/-]{2,}$/.test(token); }
+
+    function scoreTeacher(token) {
+        if (!isChinese(token)) return 0;
+        let score = 0; const length = token.length;
+        if (length >= 2 && length <= 4) score += 30;
+        if (length === 3) score += 15;
+        const commonSurname = "陳林黃張李王吳劉蔡楊許鄭謝洪郭邱曾廖賴徐周葉蘇莊江何蕭羅高潘朱簡鍾";
+        if (commonSurname.includes(token[0])) score += 20;
+        return Math.min(score, 100);
+    }
+
+    function scoreCourseName(token) {
+        if (!isChinese(token)) return 0;
+        let score = 0; const length = token.length;
+        if (length >= 3 && length <= 15) score += 30;
+        const keywords = ["學","概論","導論","原理","方法","技術","實驗","專題","分析","管理","研究","實務","理論","設計","歷史","心理","英文","統計"];
+        keywords.forEach(keyword => { if (token.includes(keyword)) score += 10; });
+        return Math.min(score, 100);
+    }
+
+    function scanStrongFeatures(tokens) {
+        const features = {
+            courseCode: null, room: null, group: null, type: null, weekType: null,
+            day: null, period: null, creditCandidates: [], usedIndexes: new Set()
+        };
+
+        tokens.forEach((rawToken, index) => {
+            const token = normalizeFullWidth(rawToken);
+
+            if (!features.courseCode && COURSE_CODE_PATTERN.test(token)) {
+                if (/[A-Za-z]/.test(token) && /\d/.test(token)) {
+                    features.courseCode = token;
+                    features.usedIndexes.add(index);
+                }
+            }
+
+            if (!features.room && ROOM_PATTERN.test(token)) {
+                features.room = token; features.usedIndexes.add(index);
+            }
+
+            if (!features.group && GROUP_PATTERN.test(token)) {
+                features.group = token; features.usedIndexes.add(index);
+            }
+
+            if (!features.type && COURSE_TYPE_PATTERN.test(token)) {
+                features.type = token; features.usedIndexes.add(index);
+            }
+
+            if (!features.weekType && WEEK_PATTERN.test(token)) {
+                features.weekType = token; features.usedIndexes.add(index);
+            }
+
+            const dayMatch = token.match(DAY_PATTERN);
+            if (dayMatch) {
+                features.day = dayMatch[1];
+                features.usedIndexes.add(index);
+                const next = tokens[index + 1];
+                if (next && looksLikePeriod(next)) {
+                    features.period = normalizeFullWidth(next).toUpperCase();
+                    features.usedIndexes.add(index + 1);
+                }
+            }
+
+            if (CREDIT_PATTERN.test(token)) {
+                const number = Number(token);
+                if (number >= 0.5 && number <= 10) {
+                    features.creditCandidates.push({ value: number, index });
+                }
+            }
+        });
+
+        return features;
+    }
+
+    /* 💡 補上 detectEnglishName 偵測英文副標題 */
+    function detectEnglishName(tokens, usedIndexes) {
+        const englishTokens = [];
+        tokens.forEach((rawToken, index) => {
+            if (usedIndexes.has(index)) return;
+            const token = normalizeFullWidth(rawToken);
+            if (/^[A-Za-z\s\-\/\(\)&]{2,}$/.test(token) && !COURSE_TYPE_PATTERN.test(token) && !/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun|Room|Group)$/i.test(token)) {
+                englishTokens.push(token);
+                usedIndexes.add(index);
+            }
+        });
+        return englishTokens.length > 0 ? englishTokens.join(" ") : null;
+    }
+
+    function scoreGradeClass(token, index, tokens, features) {
+        if (!isChinese(token)) return 0;
+        let score = 0;
+        if (/.+[一二三四五六七八九十]$/.test(token)) score += 30;
+        const next = tokens[index + 1];
+        if (next && COURSE_CODE_PATTERN.test(normalizeFullWidth(next))) score += 40;
+        const previous = tokens[index - 1];
+        if (previous && COURSE_CODE_PATTERN.test(normalizeFullWidth(previous))) score += 25;
+        if (token.length >= 5) score -= 20;
+        return Math.max(0, Math.min(score, 100));
+    }
+
+    function buildChineseCandidates(tokens, usedIndexes, strongFeatures) {
+        const candidates = [];
+        tokens.forEach((rawToken, index) => {
+            if (usedIndexes.has(index)) return;
+            const token = normalizeFullWidth(rawToken);
+            if (!isChinese(token)) return;
+
+            const teacherScore = scoreTeacher(token);
+            const courseScore = scoreCourseName(token);
+            const gradeScore = scoreGradeClass(token, index, tokens, strongFeatures);
+
+            candidates.push({ value: token, index, teacherScore, courseScore, gradeScore });
+        });
+        return candidates;
+    }
+
+    function inferSemanticFields(candidates, features) {
+        let teacher = null, courseName = null, gradeClass = null;
+
+        const gradeCandidates = candidates.filter(x => x.gradeScore >= 60).sort((a, b) => b.gradeScore - a.gradeScore);
+        if (gradeCandidates.length > 0) gradeClass = gradeCandidates[0].value;
+
+        const teacherCandidates = candidates.filter(x => x.value !== gradeClass).sort((a, b) => b.teacherScore - a.teacherScore);
+        if (teacherCandidates.length > 0 && teacherCandidates[0].teacherScore >= 45) {
+            teacher = teacherCandidates[0].value;
+        }
+
+        const courseCandidates = candidates.filter(x => x.value !== gradeClass && x.value !== teacher).sort((a, b) => b.courseScore - a.courseScore);
+        if (courseCandidates.length > 0) courseName = courseCandidates[0].value;
+
+        return { gradeClass, teacher, courseName, candidates };
+    }
+
+    function inferCredits(tokens, features) {
+        const candidates = features.creditCandidates;
+        if (candidates.length === 0) return null;
+
+        const scored = candidates.map(candidate => {
+            let score = 0; const index = candidate.index;
+            if (tokens[index + 1] && COURSE_TYPE_PATTERN.test(normalizeFullWidth(tokens[index + 1]))) score += 40;
+            if (tokens[index - 1] && COURSE_TYPE_PATTERN.test(normalizeFullWidth(tokens[index - 1]))) score += 40;
+            score += 20;
+            return { value: candidate.value, index, score };
+        });
+
+        scored.sort((a, b) => b.score - a.score);
+        return scored[0].value;
+    }
+
+    function calculateConfidence(course) {
+        let score = 0; const warnings = [];
+        if (course.courseName) score += 30; else warnings.push("無法確定課程名稱");
+        if (course.day) score += 20; else warnings.push("無法確定星期");
+        if (course.period) score += 20; else warnings.push("無法確定節次");
+        if (course.courseCode) score += 10;
+        if (course.room) score += 5;
+        if (course.teacher) score += 5;
+        if (course.credits !== null) score += 5;
+        if (course.type) score += 5;
+
+        let level = (score >= 85 && warnings.length === 0) ? "high" : (score >= 55 ? "review" : "failed");
+        return { score, level, warnings };
+    }
+
+    function parseCourseLine(line) {
+        const normalized = normalizeText(line);
+        if (!normalized) return null;
+
+        const tokens = normalized.split(/\s+/).filter(Boolean);
+        const strong = scanStrongFeatures(tokens);
+        const englishName = detectEnglishName(tokens, strong.usedIndexes);
+        const candidates = buildChineseCandidates(tokens, strong.usedIndexes, strong);
+        const semantic = inferSemanticFields(candidates, strong);
+        const credits = inferCredits(tokens, strong);
+
+        const course = {
+            raw: normalized,
+            courseName: semantic.courseName,
+            englishName,
+            teacher: semantic.teacher,
+            gradeClass: semantic.gradeClass,
+            courseCode: strong.courseCode,
+            group: strong.group,
+            credits,
+            type: strong.type,
+            room: strong.room,
+            day: strong.day,
+            period: strong.period,
+            weekType: strong.weekType
+        };
+
+        const confidence = calculateConfidence(course);
+        return { ...course, confidence: confidence.level, confidenceScore: confidence.score, warnings: confidence.warnings };
+    }
+
+    function looksLikeHeader(line) {
+        const headerKeywords = ["科目代碼", "課程名稱", "課名", "教師", "老師", "教室", "上課時間", "選課代號", "選課編號", "開課班級", "學分", "修別"];
+        let hits = 0;
+        headerKeywords.forEach(keyword => { if (line.includes(keyword)) hits++; });
+        return hits >= 2;
+    }
+
+    function parseCourseSchedule(rawText) {
+        const lines = rawText.split(/\n+/).map(normalizeText).filter(Boolean);
+        const courses = [];
+        lines.forEach(line => {
+            if (looksLikeHeader(line)) return;
+            const parsed = parseCourseLine(line);
+            if (!parsed) return;
+            if (Boolean(parsed.courseName || parsed.courseCode || (parsed.day && parsed.period))) {
+                courses.push(parsed);
+            }
+        });
+        return courses;
+    }
+
+    /* 🚀 將解析器結果對接至 UI 畫面 */
+    function openPasteModal(e) {
+        if (e) e.stopPropagation();
+        document.getElementById('pasteRawText').value = '';
+        document.getElementById('pastePreviewArea').style.display = 'none';
+        document.getElementById('btnConfirmPaste').style.display = 'none';
+        parsedTempCourses = [];
+        document.getElementById('pasteModal').classList.add('active');
+    }
+
+    function runUniversalParser() {
+        const rawText = document.getElementById('pasteRawText').value.trim();
+        if (!rawText) return alert('請先貼上課表文字唷！');
+
+        const parsedResults = parseCourseSchedule(rawText);
+        parsedTempCourses = [];
+
+        const dayMap = { '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '日': 7, '天': 7, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7 };
+
+        parsedResults.forEach(parsed => {
+            const parsedDayNum = parsed.day ? (dayMap[parsed.day] || 0) : 0;
+            
+            // 拆解節次字串 (如 "789" -> ['7','8','9'], "E56" -> ['E','5','6'])
+            let parsedPeriods = [];
+            if (parsed.period) {
+                for (let i = 0; i < parsed.period.length; i++) {
+                    const ch = parsed.period[i].toUpperCase();
+                    if (PERIODS.includes(ch) && !parsedPeriods.includes(ch)) parsedPeriods.push(ch);
+                }
+            }
+
+            if (parsed.courseName && parsedDayNum > 0 && parsedPeriods.length > 0) {
+                const colorIndex = parsedTempCourses.length % CARD_COLORS.length;
+                parsedTempCourses.push({
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+                    name: parsed.courseName,
+                    code: parsed.courseCode || '',
+                    teacher: parsed.teacher || '',
+                    room: parsed.room || '',
+                    day: parsedDayNum,
+                    weekType: parsed.weekType || '全週',
+                    borderStyle: 'solid',
+                    customColor: CARD_COLORS[colorIndex],
+                    periods: parsedPeriods,
+                    credits: typeof parsed.credits === 'number' ? parsed.credits : parsedPeriods.length,
+                    courseType: parsed.type || '必修',
+                    confidence: parsed.confidence,
+                    warnings: parsed.warnings || [],
+                    url: '', notes: ''
+                });
+            }
+        });
+
+        if (parsedTempCourses.length === 0) {
+            alert('⚠️ 智慧引擎未能識別出有效課程，請確認文字中是否包含【課名、星期、節次】資訊唷！');
+            return;
+        }
+
+        const highCount = parsedTempCourses.filter(c => c.confidence === 'high').length;
+        const reviewCount = parsedTempCourses.filter(c => c.confidence !== 'high').length;
+
+        const previewList = document.getElementById('pastePreviewList');
+        previewList.innerHTML = '';
+
+        parsedTempCourses.forEach((c, idx) => {
+            const isHigh = c.confidence === 'high';
+            const badgeHTML = isHigh ? 
+                `<span class="confidence-badge green">🟢 100% 高信心</span>` : 
+                `<span class="confidence-badge yellow">🟡 建議確認 (${c.warnings.join(', ') || '非完整欄位'})</span>`;
+
+            const dayName = ['', '一', '二', '三', '四', '五', '六', '日'][c.day] || '未知';
+
+            previewList.innerHTML += `
+                <div class="parse-item-card ${isHigh ? 'high-confidence' : 'review-needed'}">
+                    <div>
+                        ${badgeHTML}
+                        <strong>#${idx + 1} <input type="text" value="${c.name}" onchange="updateTempCourseName(${idx}, this.value)" style="padding:2px 4px; font-weight:bold; width:140px; font-size:0.8rem;"></strong>
+                    </div>
+                    <div style="color:var(--text-sub); font-size:0.75rem; margin-top:2px;">
+                        <span>教師: <input type="text" value="${c.teacher}" onchange="updateTempCourseTeacher(${idx}, this.value)" style="padding:1px 4px; width:70px; font-size:0.72rem;"></span> | 
+                        <span>星期${dayName} 第 ${c.periods.join(',')} 節</span> | 
+                        <span>${c.courseType} ${c.credits}學分</span> | 
+                        <span>${c.room || '無教室'}</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        document.getElementById('pastePreviewTitle').innerHTML = `
+            <span>🎉 解析完成：🟢 ${highCount} 門高信心 | 🟡 ${reviewCount} 門需確認</span>
+        `;
+        document.getElementById('pastePreviewArea').style.display = 'block';
+        document.getElementById('btnConfirmPaste').style.display = 'inline-block';
+    }
+
+    function updateTempCourseName(idx, val) {
+        if (parsedTempCourses[idx]) parsedTempCourses[idx].name = val.trim();
+    }
+
+    function updateTempCourseTeacher(idx, val) {
+        if (parsedTempCourses[idx]) parsedTempCourses[idx].teacher = val.trim();
+    }
+
+    function applyPastedCourses() {
+        if (!currentSemesterKey) return alert('請先建立一個學期課表唷！');
+        if (parsedTempCourses.length > 0) {
+            courses = courses.concat(parsedTempCourses);
+            recordState(); updateUI(); closeModal('pasteModal');
+            alert(`✨ 已成功將 ${parsedTempCourses.length} 門課程排入課表！`);
+        }
+    }
+
+    function openIcsModal(e) { if (e) e.stopPropagation(); document.getElementById('icsModal').classList.add('active'); }
+
+    function executeExportICS() {
+        if (!courses || courses.length === 0) return alert('目前課表中沒有任何課程可匯出唷！');
+        const startDateStr = document.getElementById('icsStartDate').value;
+        const endDateStr = document.getElementById('icsEndDate').value;
+        closeModal('icsModal');
+
+        const startDt = new Date(startDateStr);
+        const untilFormatted = endDateStr.replace(/-/g, '') + 'T235959Z';
+        let icsLines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//SCU Class Schedule Assistant//TW', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
+
+        courses.forEach(c => {
+            if (!c.periods || c.periods.length === 0) return;
+            let targetDate = new Date(startDt);
+            let dayOffset = (c.day - targetDate.getDay() + 7) % 7;
+            targetDate.setDate(targetDate.getDate() + dayOffset);
+            if (c.weekType === '雙週') targetDate.setDate(targetDate.getDate() + 7);
+
+            const sortedPeriods = [...c.periods].sort((a, b) => PERIODS.indexOf(a) - PERIODS.indexOf(b));
+            const firstP = sortedPeriods[0]; const lastP = sortedPeriods[sortedPeriods.length - 1];
+            if (!SCU_TIME_MAP[firstP] || !SCU_TIME_MAP[lastP]) return;
+
+            const startTime = SCU_TIME_MAP[firstP].start.replace(':', '') + '00';
+            const endTime = SCU_TIME_MAP[lastP].end.replace(':', '') + '00';
+            const yyyy = targetDate.getFullYear();
+            const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
+            const dd = String(targetDate.getDate()).padStart(2, '0');
+
+            const dtStart = `${yyyy}${mm}${dd}T${startTime}`;
+            const dtEnd = `${yyyy}${mm}${dd}T${endTime}`;
+            const interval = (c.weekType === '單週' || c.weekType === '雙週') ? 2 : 1;
+
+            icsLines.push('BEGIN:VEVENT');
+            icsLines.push(`SUMMARY:${c.name}`);
+            icsLines.push(`DESCRIPTION:${c.courseType} | ${c.credits}學分 | 教師: ${c.teacher || '無'} | 備註: ${c.weekType}`);
+            icsLines.push(`LOCATION:${c.room || '校區教室未定'}`);
+            icsLines.push(`DTSTART;TZID=Asia/Taipei:${dtStart}`);
+            icsLines.push(`DTEND;TZID=Asia/Taipei:${dtEnd}`);
+            icsLines.push(`RRULE:FREQ=WEEKLY;INTERVAL=${interval};UNTIL=${untilFormatted}`);
+            icsLines.push(`UID:scu-course-${c.id}@timetable`);
+            icsLines.push('END:VEVENT');
+        });
+
+        icsLines.push('END:VCALENDAR');
+        const blob = new Blob([icsLines.join('\r\n')], { type: 'text/calendar;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${currentSemesterKey || '課表'}_行事曆.ics`;
+        link.click();
+    }
+
+    window.onscroll = function() {
+        const fab = document.getElementById('fabScrollTop');
+        if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) fab.classList.add('show');
+        else fab.classList.remove('show');
+    };
+
+    function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+    window.onload = () => {
+        checkAutoSync(); initCardColorPicker();
         ['v2_semesters_data', 'v2_pinned_semester', 'my_semesters_data', 'my_pinned_semester'].forEach(k => localStorage.removeItem(k));
 
         const savedTitle = localStorage.getItem('my_app_title_name');
-        if (savedTitle) {
-            appTitleName = savedTitle;
-            document.getElementById('mainAppNameInput').value = savedTitle;
-        }
+        if (savedTitle) { appTitleName = savedTitle; document.getElementById('mainAppNameInput').value = savedTitle; }
 
         const savedCollapsed = localStorage.getItem('v3_course_form_collapsed');
         if (savedCollapsed === 'true') {
@@ -1835,43 +2086,34 @@
             document.getElementById('courseFormToggleBtn').innerText = '展開 ▾';
         }
 
+        const savedZoomIdx = localStorage.getItem('v3_saved_zoom_idx');
+        if (savedZoomIdx !== null) {
+            currentZoomIdx = parseInt(savedZoomIdx);
+            const scale = zoomScales[currentZoomIdx];
+            document.documentElement.style.setProperty('--global-zoom', scale);
+            document.getElementById('btnZoomToggle').innerText = `🔍 縮放: ${Math.round(scale * 100)}%`;
+        }
+
         const savedIconId = localStorage.getItem('v3_selected_app_icon') || 'icon1';
-        const initialIcon = APP_ICONS.find(i => i.id === savedIconId) || APP_ICONS[0];
-        selectAppIcon(initialIcon);
+        selectAppIcon(APP_ICONS.find(i => i.id === savedIconId) || APP_ICONS[0]);
 
         const savedPwaTitle = localStorage.getItem('v3_pwa_custom_title');
         if (savedPwaTitle) {
             const inputEl = document.getElementById('pwaAppNameInput');
-            if (inputEl) inputEl.value = savedPwaTitle;
-            updatePwaTitle();
+            if (inputEl) inputEl.value = savedPwaTitle; updatePwaTitle();
         }
 
         const savedPinned = localStorage.getItem('v3_clean_pinned');
-        if (savedPinned) {
-            pinnedSemesterKey = savedPinned;
-        }
+        if (savedPinned) pinnedSemesterKey = savedPinned;
 
         const savedData = localStorage.getItem('v3_clean_semesters');
-        if (savedData) {
-            try {
-                semesters = JSON.parse(savedData);
-            } catch(e){}
-        }
+        if (savedData) { try { semesters = JSON.parse(savedData); } catch(e){} }
 
         const keys = Object.keys(semesters);
-        
         if (keys.length === 0) {
-            const defaultKey = '未命名學期';
-            semesters = {};
-            semesters[defaultKey] = { courses: [], theme: 'oat' };
+            const defaultKey = '未命名學期'; semesters = {}; semesters[defaultKey] = { courses: [], theme: 'oat' };
             currentSemesterKey = defaultKey;
-        } else {
-            if (pinnedSemesterKey && semesters[pinnedSemesterKey]) {
-                currentSemesterKey = pinnedSemesterKey;
-            } else {
-                currentSemesterKey = keys[0];
-            }
-        }
+        } else currentSemesterKey = (pinnedSemesterKey && semesters[pinnedSemesterKey]) ? pinnedSemesterKey : keys[0];
 
         switchSemester(currentSemesterKey);
     };
