@@ -1,5 +1,3 @@
-同步課表
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -366,7 +364,7 @@
         <button class="btn btn-danger" onclick="deleteSelectedCourses()">🗑️ 刪除所選課程</button>
         <button class="btn btn-appearance" onclick="toggleAppearancePanel()">🎨 外觀設定</button>
         <button class="btn btn-zoom" id="btnZoomToggle" onclick="cycleZoomScale()">🔍 縮放: 100%</button>
-        <!-- ✨ 已將舊的匯入/匯出鍵，整合替換為單一「🔄 同步課表」按鈕 -->
+        <!-- ✨ 整合為單一「🔄 同步課表」按鈕，套用溫柔淡可可棕色 -->
         <button class="btn btn-backup" onclick="openSyncModal(event)">🔄 同步課表</button>
     </div>
 
@@ -668,16 +666,28 @@
         <div class="setting-title" style="color:var(--c-pwa);">2. 選擇喜歡的莫蘭迪桌面圖示：</div>
         <div class="app-icon-grid" id="pwaAppIconGrid"></div>
 
-        <div id="pwaTipBox" style="margin-top: 14px; font-size: 0.78rem; color: var(--text-main); line-height: 1.6; background: #FFF8F9; border: 1px solid var(--c-pwa); padding: 12px; border-radius: 8px;">
-            🌸 <b>您的課表資料都會安全保留，切換圖示絕不會讓課程消失唷！</b><br>
-            若想更新桌面圖示，請依照以下 3 個簡單步驟操作：<br>
-            <b>第 1 步：</b> 點擊下方按鈕在 **Safari** 中打開本網頁。<br>
-            <b>第 2 步：</b> 點擊 Safari 瀏覽器頂部或底部的 **「分享 📤」** 按鈕。<br>
-            <b>第 3 步：</b> 選擇 **「加到主畫面 ➕」** 並新增，即可完美更新桌面圖示！
+        <!-- 🌸 ✨ 升級後的第一版親切提示語＋備用救援說明 -->
+        <div id="pwaTipBox" style="margin-top: 14px; font-size: 0.8rem; color: var(--text-main); line-height: 1.6; background: #FFF0F3; border: 1px solid #FFCCD5; padding: 12px 14px; border-radius: 10px;">
+            <div style="font-weight: bold; color: #D63384; font-size: 0.88rem; margin-bottom: 6px;">
+                🌸 小提醒：
+            </div>
+            <div style="margin-bottom: 8px;">
+                點擊下方按鈕將前往 Safari 重新設定桌面圖示。<br>
+                <strong style="color: #D63384;">請放心！您的課表資料會由系統自動同步轉移。</strong><br>
+                跳轉後只需確認課表已顯示，選擇一個新的你想要的圖示，再點擊 Safari 底部的<b>「分享 📤 ➔ 加到主畫面」</b>即可完成更換！
+            </div>
+            
+            <div style="border-top: 1px dashed #FFCCD5; padding-top: 6px; margin-top: 6px; font-size: 0.75rem; color: var(--text-sub);">
+                💡 <b>備用救援說明：</b><br>
+                若跳轉後未自動顯示課表，請不必擔心！點擊工具列的<b>「🔄 同步課表」</b>並貼上您複製好的同步代碼，即可一秒還原課表囉！
+            </div>
         </div>
 
-        <div style="margin-top: 10px; text-align: center;">
-            <a href="" id="safariOpenBtn" target="_blank" class="btn" style="background: #E08291; color: white; width: 100%; padding: 10px; font-size: 0.9rem; text-decoration: none;">🔗 點我跳轉至 Safari 瀏覽器</a>
+        <!-- 🔗 帶課表跳轉按鈕 -->
+        <div style="margin-top: 12px; text-align: center;">
+            <button type="button" onclick="openExternalSafari()" class="btn" style="background: #E08291; color: white; width: 100%; padding: 10px; font-size: 0.9rem; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; box-shadow: 0 2px 8px rgba(224, 130, 145, 0.3);">
+                🔗 帶課表跳轉至 Safari 瀏覽器
+            </button>
         </div>
 
         <div class="modal-footer" style="margin-top: 10px;">
@@ -686,7 +696,7 @@
     </div>
 </div>
 
-<!-- 🔄 ✨ 全新專屬課表同步 Modal -->
+<!-- 🔄 專屬課表同步 Modal -->
 <div class="modal-overlay" id="syncModal">
     <div class="modal-box">
         <div class="modal-header">
@@ -827,15 +837,6 @@
         const safariBtn = document.getElementById('safariOpenBtn');
         if (safariBtn) safariBtn.href = window.location.origin + window.location.pathname;
 
-        const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-        const tipBox = document.getElementById('pwaTipBox');
-
-        if (isStandalone && tipBox) {
-            tipBox.innerHTML = `🌸 <b>小提醒：</b>目前您已在桌面 App 模式中開啟囉！若想替換桌面圖示，請點擊下方按鈕在 Safari 中開啟本網頁，即可重新選擇圖示並加到主畫面來更新桌布圖示喔！`;
-        } else if (tipBox) {
-            tipBox.innerHTML = `🌸 <b>您的課表資料都會安全保留，切換圖示絕不會讓課程消失唷！</b><br>若想更新桌面圖示，請依照以下 3 個簡單步驟操作：<br><b>第 1 步：</b> 點擊下方按鈕在 **Safari** 中打開本網頁。<br><b>第 2 步：</b> 點擊 Safari 瀏覽器頂部或底部的 **「分享 📤」** 按鈕。<br><b>第 3 步：</b> 選擇 **「加到主畫面 ➕」** 並新增，即可完美更新桌面圖示！`;
-        }
-
         const modal = document.getElementById('pwaModal');
         if (modal) modal.classList.add('active');
     }
@@ -847,33 +848,87 @@
         localStorage.setItem('v3_pwa_custom_title', titleVal);
     }
 
-    /* ✨ [全新] 開啟同步 Modal */
+    /* 🌐 ✨ 強制跳出 PWA 沙盒並用外部 Safari 開啟網址（自動同步保險） */
+    function openExternalSafari() {
+        const cleanPath = window.location.pathname.replace(/\/index\.html$/, '/');
+        let targetUrl = window.location.origin + cleanPath;
+
+        // 取得當前的課表資料與置頂設定
+        const savedData = localStorage.getItem('v3_clean_semesters');
+        if (savedData) {
+            try {
+                const payload = {
+                    semesters: JSON.parse(savedData),
+                    pinned: pinnedSemesterKey
+                };
+                const code = 'COURSE-V3-' + btoa(encodeURIComponent(JSON.stringify(payload)));
+                // 將資料以網址參數形式附加，開啟時會自動解碼同步
+                targetUrl += `?autoSync=${encodeURIComponent(code)}`;
+
+                // 同時備用複製到剪貼簿，雙重防呆
+                navigator.clipboard.writeText(code).catch(() => {});
+            } catch(e) {}
+        }
+
+        const safariWindow = window.open(targetUrl, '_blank');
+        if (!safariWindow || safariWindow.closed || typeof safariWindow.closed === 'undefined') {
+            window.location.href = targetUrl;
+        }
+    }
+
+    /* 🔍 ✨ Safari 開啟時自動檢查並寫入 LocalStorage */
+    function checkAutoSync() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const autoCode = urlParams.get('autoSync');
+
+        if (autoCode) {
+            try {
+                const cleanCode = autoCode.replace(/^COURSE-V3-/, '');
+                const decodedString = decodeURIComponent(atob(cleanCode));
+                const payload = JSON.parse(decodedString);
+
+                if (payload && payload.semesters) {
+                    localStorage.setItem('v3_clean_semesters', JSON.stringify(payload.semesters));
+                    if (payload.pinned) {
+                        localStorage.setItem('v3_clean_pinned', payload.pinned);
+                    } else {
+                        localStorage.removeItem('v3_clean_pinned');
+                    }
+
+                    // 清理 URL 保持簡潔
+                    const cleanPath = window.location.pathname.replace(/\/index\.html$/, '/');
+                    window.history.replaceState(null, '', cleanPath);
+
+                    alert('✨ 系統已自動為您同步課表資料至 Safari！');
+                    location.reload(); // 刷頁載入最新課表
+                }
+            } catch (e) {
+                console.error('自動同步失敗：', e);
+            }
+        }
+    }
+
     function openSyncModal(e) {
         if (e) e.stopPropagation();
         document.getElementById('syncCodeInput').value = ''; // 清空欄位
         document.getElementById('syncModal').classList.add('active');
     }
 
-    /* ✨ [全新] 產生並自動複製同步碼 */
     function generateAndCopySyncCode() {
         const savedData = localStorage.getItem('v3_clean_semesters');
         if (!savedData) return alert('目前沒有課表資料可以產生同步碼唷！');
 
         try {
-            // 打包全學期資料與置頂學期
             const payload = {
                 semesters: JSON.parse(savedData),
                 pinned: pinnedSemesterKey
             };
             
-            // UTF-8 安全 Base64 編碼
             const code = 'COURSE-V3-' + btoa(encodeURIComponent(JSON.stringify(payload)));
 
-            // 寫入剪貼簿
             navigator.clipboard.writeText(code).then(() => {
                 alert('🎉 課表同步碼已成功複製到剪貼簿！\n請前往目標裝置/模式開啟此頁面，貼上代碼即可同步！');
             }).catch(() => {
-                // 備用複製機制
                 const tempInput = document.createElement('input');
                 tempInput.value = code;
                 document.body.appendChild(tempInput);
@@ -887,7 +942,6 @@
         }
     }
 
-    /* ✨ [全新] 讀取貼上的代碼並還原 */
     function applySyncCode() {
         const inputEl = document.getElementById('syncCodeInput');
         const code = inputEl ? inputEl.value.trim() : '';
@@ -895,7 +949,6 @@
         if (!code) return alert('請先在欄位中貼上您的同步碼唷！');
 
         try {
-            // 解密前置處理
             const cleanCode = code.replace(/^COURSE-V3-/, '');
             const decodedString = decodeURIComponent(atob(cleanCode));
             const payload = JSON.parse(decodedString);
@@ -903,7 +956,6 @@
             if (!payload || !payload.semesters) throw new Error('資料格式不正確');
 
             if (confirm('同步將會載入這份課表資料，確定要套用嗎？')) {
-                // 寫入 LocalStorage
                 localStorage.setItem('v3_clean_semesters', JSON.stringify(payload.semesters));
                 
                 if (payload.pinned) {
@@ -914,7 +966,7 @@
 
                 alert('✨ 已完成同步！');
                 closeModal('syncModal');
-                location.reload(); // 刷頁呈現最新課表
+                location.reload();
             }
         } catch (e) {
             alert('⚠️ 同步碼無效或格式不正確，請確認是否有複製到完整代碼唷！');
@@ -1715,6 +1767,9 @@
     }
 
     window.onload = () => {
+        // ✨ 第一重：優先檢查是否攜帶自動同步碼
+        checkAutoSync();
+
         initCardColorPicker();
         
         ['v2_semesters_data', 'v2_pinned_semester', 'my_semesters_data', 'my_pinned_semester'].forEach(k => localStorage.removeItem(k));
@@ -1772,9 +1827,30 @@
         }
 
         switchSemester(currentSemesterKey);
+
+        // 🛡️ ✨ 第三重防線：若開啟時偵測到空白頁，自動跳出提示協助讀取剪貼簿救援
+        const currentData = localStorage.getItem('v3_clean_semesters');
+        const isEmpty = !currentData || currentData === '{}' || currentData === '{"未命名學期":{"courses":[],"theme":"oat"}}';
+
+        if (isEmpty) {
+            setTimeout(() => {
+                if (confirm('🌸 偵測到目前課表為空白，要為您嘗試讀取同步碼自動還原嗎？')) {
+                    navigator.clipboard.readText().then(text => {
+                        if (text && text.startsWith('COURSE-V3-')) {
+                            document.getElementById('syncCodeInput').value = text;
+                            applySyncCode();
+                        } else {
+                            alert('剪貼簿中未找到有效的同步碼，請點擊「🔄 同步課表」手動貼上唷！');
+                            openSyncModal();
+                        }
+                    }).catch(() => {
+                        openSyncModal();
+                    });
+                }
+            }, 600);
+        }
     };
 </script>
 
 </body>
 </html>
-
