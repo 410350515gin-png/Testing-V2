@@ -5,7 +5,7 @@ from curl_cffi import requests as cffi_requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse, urlencode
 from datetime import datetime, timezone, timedelta
-import threading, json, os
+import threading, json, os, hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 app = Flask(__name__)
@@ -15,6 +15,10 @@ S = requests.Session()
 S.headers.update({"User-Agent": UA, "Accept-Language":"zh-TW,zh;q=0.9,en;q=0.6"})
 
 TODAY = "2026-10-23"
+CACHE_ITEMS=[]
+CACHE_HEALTH={}
+CACHE_UPDATED=None
+CACHE_LOCK=threading.Lock()
 
 SOURCES = {
     "taiwanjobs": "https://course.taiwanjobs.gov.tw/",
@@ -381,26 +385,111 @@ SCRAPERS={"ntpc":scrape_ntpc,"yip":scrape_yip,"startup":scrape_startup,"youthfir
           "taichung":scrape_taichung,"taipei":scrape_taipei,"kaohsiung":scrape_kaohsiung,"smelearning":scrape_smelearning}
 
 
+def infer_city(text):
+    cities=["臺北市","新北市","桃園市","臺中市","臺南市","高雄市","基隆市","新竹市","新竹縣","宜蘭縣","苗栗縣","彰化縣","南投縣","雲林縣","嘉義市","嘉義縣","屏東縣","花蓮縣","臺東縣","澎湖縣","金門縣","連江縣"]
+    for city in cities:
+        if city in text: return city
+    if "線上" in text or "online" in text.lower(): return "線上"
+    return "地點待確認"
+
+def infer_category(text):
+    x=text.lower()
+    rules=[
+      ("資安／半導體",["資安","半導體","cyber","紅隊","藍隊"]),
+      ("軟體開發／自動化",["java","python","程式","軟體","docker","雲端","自動化","agent","coding"]),
+      ("數據分析／行銷科技",["數據","資料分析","power bi","sql","excel","輿情"]),
+      ("AI／數位科技",["ai","人工智慧","chatgpt","生成式","數位轉型","iot"]),
+      ("數位行銷／電商",["行銷","電商","社群","seo","短影音","品牌"]),
+      ("創業／商業",["創業","商業","新創","募資","財務","稅務","補助"]),
+      ("設計／影音／創意",["設計","攝影","影音","編劇","製片","藝術","表演"]),
+      ("求職／職場軟實力",["職涯","就業","履歷","面試","溝通","專案管理","職場"]),
+      ("工業／無人機",["無人機","製造","機電","木作","營造","bim"]),
+      ("生活／自我發展",["靜心","彩妝","生活","心理","自我探索"]),
+    ]
+    for cat,ks in rules:
+        if any(k in x for k in ks): return cat
+    return "其他／跨域"
+
+def infer_cost(text, explicit=None):
+    if explicit is not None: return explicit
+    if "免費" in text: return 0
+    m=re.search(r'(?:NT\$|新臺幣|費用[:：]?)\s*([0-9,]+)',text,re.I)
+    if m:
+        try:return int(m.group(1).replace(",",""))
+        except:return None
+    return None
+
+def infer_hours(text, explicit=None):
+    if explicit is not None:return explicit
+    m=re.search(r'(\d+(?:\.\d+)?)\s*小時',text)
+    if m:return float(m.group(1))
+    m=re.search(r'(\d+)\s*分鐘',text)
+    if m:return round(int(m.group(1))/60,2)
+    return None
+
+def normalize_item(source_key,row):
+    title=clean(row.get("title",""))
+    context=clean(row.get("context",""))
+    if not title:return None
+    dates=row.get("dates") or extract_dates(context)
+    text=" ".join([title,context,row.get("source","")])
+    url=row.get("url") or SOURCES.get(source_key,"")
+    uid=hashlib.sha1((source_key+"|"+url+"|"+title).encode("utf-8")).hexdigest()[:16]
+    end=max(dates) if dates else None
+    archived=bool(end and end < TODAY)
+    mode=row.get("mode") or ("線上" if ("線上" in text or "online" in text.lower()) else "實體／待確認")
+    return {
+      "id":uid,"source_key":source_key,"source":row.get("source") or source_key,
+      "title":title,"url":url,"context":context,"dates":dates,
+      "city":infer_city(text),"mode":mode,"category":infer_category(text),
+      "hours":infer_hours(text,row.get("hours")),"cost":infer_cost(text,row.get("cost")),
+      "archived":archived,"data_level":"A" if len(context)>180 and url else "B",
+      "last_checked_at":datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds")
+    }
+
+def dedupe_items(items):
+    out=[]; seen={}
+    for x in items:
+        # Same normalized title + date signature counts as same opportunity across sources.
+        name=re.sub(r'[^0-9a-zA-Z\u4e00-\u9fff]+','',x["title"]).lower()
+        sig=name+"|"+("|".join(x.get("dates") or []))
+        if sig in seen:
+            old=seen[sig]
+            if x["source"] not in old.setdefault("sources",[old["source"]]): old["sources"].append(x["source"])
+            if len(x.get("context",""))>len(old.get("context","")): old["context"]=x["context"]
+            continue
+        x["sources"]=[x["source"]];seen[sig]=x;out.append(x)
+    return out
+
 def background_audit():
+    global CACHE_ITEMS,CACHE_HEALTH,CACHE_UPDATED
     time.sleep(3)
-    summary={}
+    all_items=[]; health={}
     for name,fn in SCRAPERS.items():
         t=time.time()
         try:
-            items=fn()
-            result={"ok":True,"count":len(items),"sample_titles":[x.get("title") for x in items[:5]],"seconds":round(time.time()-t,2)}
+            rows=fn()
+            norm=[normalize_item(name,x) for x in rows]
+            norm=[x for x in norm if x]
+            all_items.extend(norm)
+            result={"ok":True,"count":len(rows),"normalized":len(norm),"seconds":round(time.time()-t,2)}
         except Exception as e:
-            result={"ok":False,"error":repr(e),"seconds":round(time.time()-t,2)}
-        summary[name]=result
+            result={"ok":False,"count":0,"error":repr(e),"seconds":round(time.time()-t,2)}
+        health[name]=result
         print("CRAWL_SOURCE "+name+" "+json.dumps(result,ensure_ascii=False),flush=True)
     try:
         tj=inspect_taiwanjobs()
-        result={"ok":True,"scripts":len(tj.get("scripts",[])),"links":len(tj.get("links",[])),"controls":tj.get("controls",[])[:40],"hints":tj.get("hints",[])[:80]}
+        result={"ok":True,"count":0,"diagnostic":True,"scripts":len(tj.get("scripts",[])),"links":len(tj.get("links",[])),
+                "controls":tj.get("controls",[])[:40],"hints":tj.get("hints",[])[:80]}
     except Exception as e:
-        result={"ok":False,"error":repr(e)}
-    summary["taiwanjobs"]=result
+        result={"ok":False,"count":0,"error":repr(e)}
+    health["taiwanjobs"]=result
     print("CRAWL_SOURCE taiwanjobs "+json.dumps(result,ensure_ascii=False),flush=True)
-    print("CRAWL_STATUS "+json.dumps(summary,ensure_ascii=False),flush=True)
+    with CACHE_LOCK:
+        CACHE_ITEMS=dedupe_items(all_items)
+        CACHE_HEALTH=health
+        CACHE_UPDATED=datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds")
+    print("CRAWL_TOTAL "+json.dumps({"total":len(CACHE_ITEMS),"health":health},ensure_ascii=False),flush=True)
 
 @app.get("/")
 def root():
@@ -419,6 +508,24 @@ def status():
     try: out["taiwanjobs_inspect"]={"ok":True,**inspect_taiwanjobs()}
     except Exception as e: out["taiwanjobs_inspect"]={"ok":False,"error":repr(e)}
     return jsonify(out)
+
+@app.after_request
+def cors(resp):
+    resp.headers["Access-Control-Allow-Origin"]="*"
+    resp.headers["Cache-Control"]="no-store"
+    return resp
+
+@app.get("/api/all")
+def api_all():
+    with CACHE_LOCK:
+        items=list(CACHE_ITEMS);health=dict(CACHE_HEALTH);updated=CACHE_UPDATED
+    include_archive=request.args.get("archive","0")=="1"
+    if not include_archive: items=[x for x in items if not x.get("archived")]
+    return jsonify({"items":items,"total":len(items),"health":health,"updated_at":updated,"archive_included":include_archive})
+
+@app.get("/api/health")
+def api_health():
+    with CACHE_LOCK:return jsonify({"health":CACHE_HEALTH,"updated_at":CACHE_UPDATED,"cached_items":len(CACHE_ITEMS)})
 
 @app.get("/api/source/<name>")
 def source(name):
