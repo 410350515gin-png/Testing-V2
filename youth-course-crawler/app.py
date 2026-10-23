@@ -336,7 +336,7 @@ def _parse_sme_page(page):
             txt=clean(node.get_text(" ",strip=True))
             h=node.find(["h2","h3","h4","h5"])
             if h: heading=clean(h.get_text(" ",strip=True))
-            if re.search(r'\d+\s*分鐘',txt) and ("免費" in txt or "收費" in txt):
+            if re.search(r'\d+\s*分鐘',txt) and ("免費" in txt or "收費" in txt) and heading:
                 context=txt; break
         title=heading or clean(a.get_text(" ",strip=True))
         if not title or title in ["免費課程","收費課程","所有課程","課程分類"]:
@@ -379,6 +379,112 @@ def scrape_smelearning():
     print("SME_AUDIT "+json.dumps({"advertised":advertised,"actual":len(items),"failures":failures},ensure_ascii=False),flush=True)
     return items
 
+def _find_records_and_total(obj):
+    records=None; total=None
+    if isinstance(obj,list):
+        return obj,len(obj)
+    if not isinstance(obj,dict):
+        return [],0
+    # Common API shapes.
+    for k in ["Data","data","Items","items","Rows","rows","Result","result","Courses","courses","List","list"]:
+        v=obj.get(k)
+        if isinstance(v,list):
+            records=v; break
+        if isinstance(v,dict):
+            rr,tt=_find_records_and_total(v)
+            if rr:
+                records=rr
+                if tt: total=tt
+                break
+    if records is None:
+        # Pick the largest list recursively.
+        candidates=[]
+        for k,v in obj.items():
+            if isinstance(v,list): candidates.append(v)
+            elif isinstance(v,dict):
+                rr,tt=_find_records_and_total(v)
+                if rr: candidates.append(rr)
+                if total is None and tt: total=tt
+        records=max(candidates,key=len) if candidates else []
+    for k in ["Total","total","TotalCount","totalCount","Count","count","RecordsTotal","recordsTotal"]:
+        v=obj.get(k)
+        if isinstance(v,(int,float)) and v>=len(records):
+            total=int(v); break
+    if total is None:
+        for v in obj.values():
+            if isinstance(v,dict):
+                _,tt=_find_records_and_total(v)
+                if tt and tt>=len(records):
+                    total=tt; break
+    return records,total
+
+def _twj_row(row):
+    if not isinstance(row,dict): return None
+    title=""
+    for k in ["CourseName","ClassName","TrainingName","Name","Title","CourseTitle"]:
+        if row.get(k):
+            title=clean(str(row.get(k))); break
+    if not title:
+        # Find the most plausible string field.
+        for k,v in row.items():
+            if isinstance(v,str) and 5<=len(clean(v))<=200 and any(x in k.lower() for x in ["name","title","course"]):
+                title=clean(v); break
+    if not title:return None
+    url=row.get("Url") or row.get("URL") or row.get("CourseUrl") or row.get("Link") or ""
+    if url:url=absolute("https://course.taiwanjobs.gov.tw/",str(url))
+    dates=[]
+    for k,v in row.items():
+        if v and isinstance(v,str) and any(x in k.lower() for x in ["date","time","start","end"]):
+            dates.extend(extract_dates(v))
+    dates=list(dict.fromkeys(dates))
+    city=clean(str(row.get("City") or row.get("CityName") or row.get("TrainingCity") or ""))
+    fee=row.get("Fee")
+    try: fee=float(fee) if fee not in [None,""] else None
+    except: fee=None
+    context=json.dumps(row,ensure_ascii=False,separators=(",",":"))
+    source_name=clean(str(row.get("SourceTypeName") or row.get("TrainingPlanName") or "台灣就業通／職業訓練整合網"))
+    return {"source":source_name,"title":title,"url":url,"dates":dates,"context":context[:5000],
+            "cost":fee,"mode":"實體／待確認","city_hint":city,"raw":row}
+
+def scrape_taiwanjobs():
+    api="https://course.taiwanjobs.gov.tw/api/Course/paging"
+    limit=100
+    offset=0
+    all_rows=[]; seen=set(); advertised=None
+    while offset<50000:
+        payload={
+          "Limit":limit,"Offset":offset,"SourceType":"","Citys":[],
+          "TrainingStartDateYear":2026,"TrainingStartDateMonth":1,
+          "TrainingEndDateYear":2027,"TrainingEndDateMonth":12,
+          "TrainingUnit":"","Search":"","RegisterStatus":"","TrainingPeriod":1,
+          "sourcePrimaryKey":"","Categorys":None,"Sort":"RegisterStartDateTime",
+          "Order":"desc","JobCategories":[]
+        }
+        r=S.post(api,json=payload,headers={"User-Agent":UA,"Accept":"application/json","Content-Type":"application/json"},
+                 timeout=35,verify=False)
+        if r.status_code>=400:
+            # Some endpoints cap page size; retry with 20.
+            if limit!=20:
+                limit=20; offset=0; all_rows=[]; seen=set(); advertised=None; continue
+            r.raise_for_status()
+        obj=r.json()
+        rows,total=_find_records_and_total(obj)
+        if advertised is None and total: advertised=total
+        if not rows: break
+        added=0
+        for row in rows:
+            x=_twj_row(row)
+            if not x: continue
+            key=x.get("url") or (x["title"]+"|"+("|".join(x.get("dates") or [])))
+            if key in seen: continue
+            seen.add(key);all_rows.append(x);added+=1
+        if len(rows)<limit: break
+        offset+=limit
+        if advertised is not None and offset>=advertised: break
+        if added==0 and offset>limit*2: break
+    print("TWJ_AUDIT "+json.dumps({"advertised":advertised,"actual":len(all_rows),"limit":limit},ensure_ascii=False),flush=True)
+    return all_rows
+
 def inspect_taiwanjobs():
     r=get(SOURCES["taiwanjobs_conditions"])
     soup=BeautifulSoup(r.text,"html.parser")
@@ -420,7 +526,7 @@ def inspect_taiwanjobs():
     return {"scripts":scripts[-30:],"links":links[:120],"controls":controls[:250],"hints":sorted(hints)[:250],
             "api_context":api_context[:20],"html_len":len(r.text),"title":clean(soup.title.get_text(" ",strip=True)) if soup.title else ""}
 
-SCRAPERS={"ntpc":scrape_ntpc,"yip":scrape_yip,"startup":scrape_startup,"youthfirst":scrape_youthfirst,
+SCRAPERS={"taiwanjobs":scrape_taiwanjobs,"ntpc":scrape_ntpc,"yip":scrape_yip,"startup":scrape_startup,"youthfirst":scrape_youthfirst,
           "taichung":scrape_taichung,"taipei":scrape_taipei,"kaohsiung":scrape_kaohsiung,"smelearning":scrape_smelearning}
 
 
@@ -480,7 +586,7 @@ def normalize_item(source_key,row):
     return {
       "id":uid,"source_key":source_key,"source":row.get("source") or source_key,
       "title":title,"url":url,"context":context,"dates":dates,
-      "city":infer_city(text),"mode":mode,"category":infer_category(text),
+      "city":(row.get("city_hint") or infer_city(text)),"mode":mode,"category":infer_category(text),
       "hours":infer_hours(text,row.get("hours")),"cost":infer_cost(text,row.get("cost")),
       "archived":archived,"data_level":"A" if len(context)>180 and url else "B",
       "last_checked_at":datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds")
@@ -511,19 +617,18 @@ def background_audit():
             norm=[normalize_item(name,x) for x in rows]
             norm=[x for x in norm if x]
             all_items.extend(norm)
-            result={"ok":True,"count":len(rows),"normalized":len(norm),"seconds":round(time.time()-t,2)}
+            result={"ok":True,"count":len(rows),"normalized":len(norm),"sample_titles":[x.get("title") for x in rows[:5]],"seconds":round(time.time()-t,2)}
         except Exception as e:
             result={"ok":False,"count":0,"error":repr(e),"seconds":round(time.time()-t,2)}
         health[name]=result
         print("CRAWL_SOURCE "+name+" "+json.dumps(result,ensure_ascii=False),flush=True)
     try:
         tj=inspect_taiwanjobs()
-        result={"ok":True,"count":0,"diagnostic":True,"scripts":len(tj.get("scripts",[])),"links":len(tj.get("links",[])),
-                "controls":tj.get("controls",[])[:40],"hints":tj.get("hints",[])[:80],"api_context":tj.get("api_context",[])[:8]}
+        diag={"ok":True,"diagnostic":True,"scripts":len(tj.get("scripts",[])),"links":len(tj.get("links",[])),
+              "hints":tj.get("hints",[])[:20]}
     except Exception as e:
-        result={"ok":False,"count":0,"error":repr(e)}
-    health["taiwanjobs"]=result
-    print("CRAWL_SOURCE taiwanjobs "+json.dumps(result,ensure_ascii=False),flush=True)
+        diag={"ok":False,"diagnostic":True,"error":repr(e)}
+    health["taiwanjobs_diagnostic"]=diag
     with CACHE_LOCK:
         CACHE_ITEMS=dedupe_items(all_items)
         CACHE_HEALTH=health
