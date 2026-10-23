@@ -25,6 +25,7 @@ SOURCES = {
     "ntpc": "https://www.youth.ntpc.gov.tw/youth/ch/app/course/list?id=181&module=course",
     "taichung": "https://1catchjob.taichung.gov.tw/Default.aspx",
     "kaohsiung": "https://youth.kcg.gov.tw/",
+    "smelearning": "https://smelearning.sme.gov.tw/class_all.php",
 }
 
 def get(url, params=None):
@@ -100,22 +101,25 @@ def generic_links(url, include_patterns=(), exclude_patterns=(), max_items=500):
 
 def scrape_ntpc():
     items=[]; seen=set()
-    for page in range(1,30):
-        r=get(SOURCES["ntpc"], params={"id":"181","module":"course","page":page,"pageSize":15})
+    for page in range(1,50):
+        url=f"https://www.youth.ntpc.gov.tw/youth/ch/app/course/list?id=181&module=course&page={page}&pageSize=15"
+        try:
+            r=get(url)
+        except Exception:
+            if page==1: raise
+            break
         soup=BeautifulSoup(r.text,"html.parser")
         found=0
-        for a in soup.find_all("a", href=True):
+        for a in soup.find_all("a",href=True):
             href=absolute(r.url,a["href"])
             if "/course/view" not in href: continue
             title=clean(a.get_text(" ",strip=True))
             if not title or href in seen: continue
-            context=clean(a.parent.get_text(" ",strip=True)) if a.parent else title
-            ds=extract_dates(context+" "+title)
-            items.append({"source":"新北市青年局","title":title,"url":href,"dates":ds,"context":context[:500]})
+            parent=a.find_parent(["li","div","article","tr"])
+            context=clean(parent.get_text(" ",strip=True)) if parent else title
+            items.append({"source":"新北市青年局／新北有課","title":title,"url":href,"dates":extract_dates(context),"context":context[:1500]})
             seen.add(href); found+=1
-        # stop after no unique item on a page
-        if found==0:
-            if page>3: break
+        if found==0: break
     return items
 
 def scrape_yip():
@@ -251,45 +255,73 @@ def crawl_domain_candidates(start, domain, keywords, max_pages=120, max_depth=2)
     return items, len(seen_pages)
 
 def scrape_taipei():
-    items=[]; seen=set()
-    seeds=["https://class.tpyd.gov.taipei/","https://class.tpyd.gov.taipei/participate/?node=0"]
-    for url in seeds:
-        try:r=get(url)
-        except Exception:continue
+    items=[]; seen=set(); detail_urls=[]
+    for url in ["https://class.tpyd.gov.taipei/","https://class.tpyd.gov.taipei/participate/?node=0"]:
+        try: r=get(url)
+        except Exception: continue
         soup=BeautifulSoup(r.text,"html.parser")
         for a in soup.find_all("a",href=True):
-            href=absolute(r.url,a["href"]); title=clean(a.get_text(" ",strip=True))
-            if not title or href in seen: continue
-            parent=a.find_parent(["li","div","article","section"])
-            context=clean(parent.get_text(" ",strip=True)) if parent else title
-            if not re.search(r'報名|活動|課程|學堂|工作坊|講座',context): continue
-            if href.rstrip("/") in [r.url.rstrip("/"),"https://class.tpyd.gov.taipei/participate"]: continue
-            items.append({"source":"臺北市政府青年局","title":title,"url":href,"dates":extract_dates(context),"context":context[:1200]})
-            seen.add(href)
+            href=absolute(r.url,a["href"])
+            if "mode=detail" in href and re.search(r'node=\d+',href) and href not in detail_urls:
+                detail_urls.append(href)
+    for href in detail_urls:
+        try: r=get(href)
+        except Exception: continue
+        soup=BeautifulSoup(r.text,"html.parser")
+        title=""
+        for tag in ["h1","h2","h3"]:
+            h=soup.find(tag)
+            if h:
+                title=clean(h.get_text(" ",strip=True))
+                if title: break
+        text=clean(soup.get_text(" ",strip=True))
+        if not title or title in ["活動總覽","開放報名中","活動詳情"]:
+            title=clean(soup.title.get_text(" ",strip=True)) if soup.title else ""
+            title=re.sub(r'[-｜|].*$','',title).strip()
+        if not title or len(title)<3: continue
+        items.append({"source":"臺北市政府青年局","title":title,"url":href,"dates":extract_dates(text),"context":text[:2200]})
+        seen.add(href)
     return items
 
 def scrape_kaohsiung():
     items=[]; seen=set()
-    seeds=[
-      "https://youth.kcg.gov.tw/ResourceSearch.aspx?n=41&sms=10164",
-      "https://youth.kcg.gov.tw/News.aspx?n=293&sms=10305&PageSize=50&page=1",
-    ]
-    for url in seeds:
-        try:r=get(url)
-        except Exception:continue
-        soup=BeautifulSoup(r.text,"html.parser")
+    url="https://youth.kcg.gov.tw/ResourceSearch.aspx?n=41&sms=10164"
+    r=get(url); soup=BeautifulSoup(r.text,"html.parser")
+    for a in soup.find_all("a",href=True):
+        href=absolute(r.url,a["href"]); title=clean(a.get_text(" ",strip=True))
+        if not title or href in seen: continue
+        parent=a.find_parent(["li","div","article","tr"])
+        context=clean(parent.get_text(" ",strip=True)) if parent else title
+        if not re.search(r'課程時間|課程地點|費用|申請資格',context): continue
+        if title in ["找課程","找資源","更多"]: continue
+        items.append({"source":"高雄市政府青年局／找課程","title":title,"url":href,"dates":extract_dates(context),"context":context[:1800]})
+        seen.add(href)
+    return items
+
+def scrape_smelearning():
+    items=[]; seen=set()
+    for page in range(1,80):
+        r=get(SOURCES["smelearning"],params={"page":page,"price_sort":0})
+        soup=BeautifulSoup(r.text,"html.parser"); page_items=0
         for a in soup.find_all("a",href=True):
             href=absolute(r.url,a["href"]); title=clean(a.get_text(" ",strip=True))
-            if not title or href in seen: continue
-            parent=a.find_parent(["li","div","article","tr"])
+            if not href or href in seen or "smelearning.sme.gov.tw" not in href: continue
+            low=href.lower()
+            if not any(k in low for k in ["course","class","detail","learn"]): continue
+            parent=a.find_parent(["li","div","article","section"])
             context=clean(parent.get_text(" ",strip=True)) if parent else title
-            if "ResourceSearch" in r.url:
-                if not re.search(r'課程時間|課程地點|費用|申請資格|課程',context): continue
-            else:
-                if "News_Content.aspx" not in href: continue
-                if not re.search(r'課程|培訓|工作坊|講座|報名|人才培育|短影音|新媒體|行銷', title+" "+context): continue
-            items.append({"source":"高雄市政府青年局","title":title,"url":href,"dates":extract_dates(context),"context":context[:1500]})
-            seen.add(href)
+            if not re.search(r'分鐘|小時|免費|元|人已學習|課程',context): continue
+            if len(title)<3 and parent:
+                hh=parent.find(["h2","h3","h4","h5"])
+                title=clean(hh.get_text(" ",strip=True)) if hh else ""
+            if not title or title in ["所有課程","免費課程","課程分類"]: continue
+            mm=re.search(r'(\d{1,4})\s*分鐘',context)
+            mins=int(mm.group(1)) if mm else None
+            hours=round(mins/60,2) if mins is not None else None
+            cost=0 if "免費" in context else None
+            items.append({"source":"中小企業網路大學校","title":title,"url":href,"dates":[],"context":context[:1500],"hours":hours,"cost":cost,"mode":"線上"})
+            seen.add(href); page_items+=1
+        if page_items==0 and page>2: break
     return items
 
 def inspect_taiwanjobs():
@@ -307,7 +339,7 @@ def inspect_taiwanjobs():
     return {"forms":forms[:10],"scripts":scripts[-30:],"links":links[:120],"html_len":len(r.text),"title":clean(soup.title.get_text(" ",strip=True)) if soup.title else ""}
 
 SCRAPERS={"ntpc":scrape_ntpc,"yip":scrape_yip,"startup":scrape_startup,"youthfirst":scrape_youthfirst,
-          "taichung":scrape_taichung,"taipei":scrape_taipei,"kaohsiung":scrape_kaohsiung}
+          "taichung":scrape_taichung,"taipei":scrape_taipei,"kaohsiung":scrape_kaohsiung,"smelearning":scrape_smelearning}
 
 
 def background_audit():
