@@ -12,7 +12,7 @@ header{position:relative;z-index:1;background:rgba(8,16,29,.94);border-bottom:1p
 .box{background:rgba(17,24,39,.88);border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:14px}.searchrow{display:grid;grid-template-columns:1fr auto;gap:9px}.filterrow{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-top:9px}.field{width:100%;background:#0d1525;color:var(--txt);border:1px solid #30405a;border-radius:11px;padding:11px}.go{border:0;border-radius:11px;padding:0 18px;background:linear-gradient(135deg,var(--g),var(--b));font-weight:900;color:#04110d;cursor:pointer}.feedback{min-height:18px;font-size:11px;color:#8cf0c0;margin-top:8px}
 .quick{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}.q{background:#111c2d;color:#c8d4e5;border:1px solid #30405a;border-radius:999px;padding:7px 10px;cursor:pointer;font-size:12px}.q.on{border-color:var(--g);color:#bdf7df;background:rgba(52,211,153,.1)}
 .hero{display:flex;justify-content:space-between;gap:10px;align-items:end;margin:18px 0}.hero h1{font-size:27px;margin:0}.hero p{margin:5px 0 0;color:var(--mut);font-size:13px}.count{color:var(--mut);font-size:12px}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}.card{background:linear-gradient(180deg,#172033,#111827);border:1px solid var(--line);border-radius:16px;padding:15px}.card.sel{box-shadow:0 0 0 2px rgba(52,211,153,.65)}.row{display:flex;justify-content:space-between;gap:8px;align-items:center}.tag,.status{font-size:10px;border:1px solid #33445e;border-radius:999px;padding:5px 7px}.status.good{color:#8cf0c0}.status.warn{color:#fcd28d}.card h3{font-size:17px;line-height:1.4;margin:10px 0 7px}.desc{color:#bbc6d5;font-size:13px;line-height:1.5;min-height:58px}.score{font-size:28px;font-weight:900}.score small{font-size:11px;color:var(--mut)}.metrics{display:grid;grid-template-columns:1fr 1fr;gap:7px;background:#0d1525;padding:9px;border-radius:11px;margin:10px 0}.metric small{display:block;color:#7d8ba0;font-size:10px}.metric b{font-size:12px}.skills{display:flex;flex-wrap:wrap;gap:5px}.skill{font-size:10px;background:#101a2a;border:1px solid #2b3a50;border-radius:7px;padding:4px 6px}.actions{display:flex;justify-content:space-between;gap:8px;border-top:1px solid var(--line);padding-top:11px;margin-top:12px}.btn{border:1px solid #30405a;background:#122035;color:#d5dfec;border-radius:10px;padding:9px 10px;font-weight:800;cursor:pointer}.btn.primary{background:linear-gradient(135deg,var(--g),var(--b));color:#04110d;border:0}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}.card{background:linear-gradient(180deg,#172033,#111827);border:1px solid var(--line);border-radius:16px;padding:15px}.card.sel{box-shadow:0 0 0 2px rgba(52,211,153,.65)}.row{display:flex;justify-content:space-between;gap:8px;align-items:center}.tag,.status,.level{font-size:10px;border:1px solid #33445e;border-radius:999px;padding:5px 7px}.level.A{color:#8cf0c0;border-color:#2f7a61}.level.B{color:#93c5fd;border-color:#315c82}.level.C{color:#fcd28d;border-color:#7b5a22}.status.good{color:#8cf0c0}.status.warn{color:#fcd28d}.card h3{font-size:17px;line-height:1.4;margin:10px 0 7px}.desc{color:#bbc6d5;font-size:13px;line-height:1.5;min-height:58px}.score{font-size:28px;font-weight:900}.score small{font-size:11px;color:var(--mut)}.metrics{display:grid;grid-template-columns:1fr 1fr;gap:7px;background:#0d1525;padding:9px;border-radius:11px;margin:10px 0}.metric small{display:block;color:#7d8ba0;font-size:10px}.metric b{font-size:12px}.skills{display:flex;flex-wrap:wrap;gap:5px}.skill{font-size:10px;background:#101a2a;border:1px solid #2b3a50;border-radius:7px;padding:4px 6px}.actions{display:flex;justify-content:space-between;gap:8px;border-top:1px solid var(--line);padding-top:11px;margin-top:12px}.btn{border:1px solid #30405a;background:#122035;color:#d5dfec;border-radius:10px;padding:9px 10px;font-weight:800;cursor:pointer}.btn.primary{background:linear-gradient(135deg,var(--g),var(--b));color:#04110d;border:0}
 .dock{position:fixed;left:50%;bottom:12px;transform:translate(-50%,130%);transition:.2s;width:min(920px,calc(100% - 20px));background:#0a1220;border:1px solid rgba(52,211,153,.45);border-radius:15px;padding:10px;display:flex;gap:8px;align-items:center;z-index:30}.dock.show{transform:translate(-50%,0)}.chips{display:flex;gap:6px;overflow:auto;flex:1}.chip{white-space:nowrap;background:#162236;border:1px solid #33445e;border-radius:999px;padding:6px 8px;font-size:10px}.chip button{background:none;border:0;color:#fda4af;font-weight:900}
 .modal{position:fixed;inset:0;background:rgba(3,8,16,.95);z-index:40;display:none;overflow:auto}.modal.show{display:block}.modalin{max-width:1120px;margin:auto;padding:18px}.modalhead{display:flex;justify-content:space-between;align-items:center}.goals{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}.goal{background:#111c2d;color:#bdc8d7;border:1px solid #30405a;border-radius:999px;padding:7px 9px}.goal.on{border-color:var(--g);color:#bdf7df}.insight{background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.3);border-left:4px solid var(--g);border-radius:12px;padding:12px;margin:12px 0;font-size:12px;line-height:1.6}.tw{overflow:auto;border:1px solid var(--line);border-radius:12px}table{border-collapse:collapse;width:100%;min-width:760px;font-size:12px}th,td{border-bottom:1px solid var(--line);border-left:1px solid var(--line);padding:10px;vertical-align:top}th{background:#0a1220;position:sticky;top:0}th:first-child,td:first-child{position:sticky;left:0;background:#0d1525;min-width:150px}.best{color:#8cf0c0;font-weight:900}
 .drawer{position:fixed;top:0;right:0;height:100%;width:min(560px,100%);background:#0b1422;border-left:1px solid var(--line);z-index:50;transform:translateX(100%);transition:.2s;overflow:auto;padding:18px}.drawer.show{transform:translateX(0)}.back{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:45;display:none}.back.show{display:block}.section{background:#101827;border:1px solid #2a3850;border-radius:12px;padding:12px;margin:10px 0}.section p{font-size:12px;line-height:1.6;color:#c1cbd8}
@@ -20,53 +20,144 @@ header{position:relative;z-index:1;background:rgba(8,16,29,.94);border-bottom:1p
 </style>
 </head>
 <body>
-<header><div class="wrap"><div class="top"><div><div class="brand">青年課程雷達 <span style="font-size:11px;color:#8cf0c0">Live v1.1</span></div><div class="sub">2026/10/23 台北時間快照 · 搜尋、縣市篩選、比較可直接操作</div></div><div class="sub">12 筆課程／機會</div></div>
+<header><div class="wrap"><div class="top"><div><div class="brand">青年課程雷達 <span style="font-size:11px;color:#8cf0c0">Live v2</span></div><div class="sub">2026/10/23 台北時間快照 · 搜尋、縣市篩選、比較可直接操作</div></div><div class="sub"><span id="totalCount">—</span> 筆課程／機會</div></div>
 <div class="box">
 <div class="searchrow"><input id="search" class="field" placeholder="搜尋 AI、Python、Java、行銷、機構…"><button id="apply" class="go">搜尋／套用篩選</button></div>
 <div class="filterrow">
 <select id="city" class="field"><option value="">全部縣市／地點</option><option>臺北市</option><option>新北市</option><option>桃園市</option><option>臺中市</option><option>臺南市</option><option>高雄市</option><option>基隆市</option><option>新竹市</option><option>新竹縣</option><option>宜蘭縣</option><option>苗栗縣</option><option>彰化縣</option><option>南投縣</option><option>雲林縣</option><option>嘉義市</option><option>嘉義縣</option><option>屏東縣</option><option>花蓮縣</option><option>臺東縣</option><option>澎湖縣</option><option>金門縣</option><option>連江縣</option><option>線上</option><option>地點待確認</option></select>
-<select id="cat" class="field"><option value="">全部課程方向</option><option>AI／數位科技</option><option>軟體開發／自動化</option><option>數據分析／行銷科技</option><option>數位行銷／電商</option><option>資安／半導體</option><option>求職／職場軟實力</option><option>實習／職涯探索</option><option>設計／影音／創意</option></select>
-<select id="status" class="field"><option value="">全部狀態</option><option>報名中</option><option>即將截止</option><option>需確認</option><option>已開課／需確認補報</option></select>
+<select id="cat" class="field"><option value="">全部課程方向</option><option>AI／數位科技</option><option>軟體開發／自動化</option><option>數據分析／行銷科技</option><option>數位行銷／電商</option><option>資安／半導體</option><option>工業／無人機</option><option>創業／商業</option><option>求職／職場軟實力</option><option>實習／職涯探索</option><option>設計／影音／創意</option><option>生活／自我發展</option><option>志願服務／公共參與</option></select>
+<select id="status" class="field"><option value="">全部狀態</option><option>報名中</option><option>即將截止</option><option>需確認</option><option>已開課／需確認補報</option><option>已截止</option></select>
 <select id="time" class="field"><option value="">全部時間投入</option><option value="micro">單次講座／體驗 ≤8h</option><option value="short">短期工作坊 9–40h</option><option value="mid">技能進修 41–120h</option><option value="intense">密集培訓 121–300h</option><option value="long">長期職訓 >300h</option><option value="unknown">時數未公開</option></select>
 <select id="sort" class="field"><option value="score">排序：綜合分數</option><option value="deadline">排序：最早截止</option><option value="market">排序：市場需求</option><option value="hours">排序：總時數最短</option></select>
 </div>
-<div id="feedback" class="feedback">輸入關鍵字後按搜尋；下拉篩選會立即套用。</div>
+<div id="feedback" class="feedback">輸入關鍵字後按搜尋；下拉篩選會立即套用。分數為相對決策指標，市場面使用類別層級趨勢估算，不是假裝成即時職缺數。</div>
 <div class="quick"><button id="openOnly" class="q">只看可報名</button><button id="freeOnly" class="q">免費</button><button id="lowOnly" class="q">低投入 ≤40h</button><button id="intenseOnly" class="q">轉職型 ≥120h</button><button id="onlineOnly" class="q">線上／混合</button><button id="reset" class="q">重設</button></div>
 </div></div></header>
 <main class="wrap"><div class="hero"><div><h1>把政府青年課程變成可以比較的決策清單</h1><p>最多選 3 門；比較資格、時間、成本、市場、技能與資料信心。</p></div><div id="count" class="count"></div></div><div id="grid" class="grid"></div></main>
 <div id="dock" class="dock"><b style="font-size:12px">比較</b><div id="chips" class="chips"></div><button id="clear" class="btn">清除</button><button id="compare" class="btn primary">開始比較</button></div>
 <div id="back" class="back"></div><div id="drawer" class="drawer"><button id="closeDrawer" class="btn">關閉</button><div id="drawerBody"></div></div>
 <div id="modal" class="modal"><div class="modalin"><div class="modalhead"><h2>課程比較</h2><button id="closeModal" class="btn">關閉</button></div><div class="goals"><button data-goal="balanced" class="goal on">平衡</button><button data-goal="job" class="goal">快速完成＋就業</button><button data-goal="cost" class="goal">最低成本</button><button data-goal="beginner" class="goal">零基礎</button><button data-goal="market" class="goal">市場需求</button><button id="diff" class="goal">只看差異：關</button></div><div id="insight" class="insight"></div><div class="tw"><table id="table"></table></div></div></div>
+<script src="data.js"></script>
 <script>
-var COURSES=[
-{id:'a',title:'AIoT智慧產品設計與跨域AI行銷整合應用班',city:'新竹市',mode:'實體',cat:'AI／數位科技',status:'報名中',deadline:'2026-11-09',start:'2026-11-13',end:'2027-02-12',hours:412,cost:10000,market:88,fit:84,quality:86,employment:72,beginner:65,provider:'新竹市電腦商業同業公會',source:'青年職訓資源網／產業新尖兵',skills:['AIoT','3D建模','生成式AI','數位行銷'],desc:'AIoT、3D建模、生成式AI與AI行銷實作，偏完整跨域養成。',elig:'15–29歲本國籍失業／待業青年；日間部在學生不適用產業新尖兵',risk:'長時數日間培訓，需確認自己是否符合產業新尖兵資格。',url:'https://ttms.etraining.gov.tw/eYVTR/YipClassApply/'},
-{id:'b',title:'Java雲端服務開發技術養成班',city:'桃園市',mode:'實體',cat:'軟體開發／自動化',status:'即將截止',deadline:'2026-10-27',start:'2026-10-29',end:'2027-03-25',hours:552,cost:10000,market:86,fit:91,quality:90,employment:78,beginner:40,provider:'財團法人商業發展研究院',source:'青年職訓資源網／產業新尖兵',skills:['Java','Spring Boot','Vue','MySQL','Docker','GCP'],desc:'Java、資料庫、前後端、雲端與DevOps，偏完整工程師養成。',elig:'15–29歲本國籍失業／待業青年；日間部在學生不適用產業新尖兵',risk:'552小時投入高，較適合已確定要走工程職者。',url:'https://ttms.etraining.gov.tw/eYVTR/YipClassApply/'},
-{id:'c',title:'行銷科技數據分析養成班',city:'臺北市',mode:'實體',cat:'數據分析／行銷科技',status:'即將截止',deadline:'2026-10-28',start:'2026-10-30',end:'2027-02-01',hours:455,cost:10000,market:92,fit:92,quality:91,employment:83,beginner:65,provider:'國立臺北商業大學',source:'青年職訓資源網／產業新尖兵',skills:['Python','爬蟲','Power BI','SQL','數位行銷'],desc:'Python、Power BI、SQL與數位行銷，偏商業分析與MarTech。',elig:'15–29歲本國籍失業／待業青年；日間部在學生不適用產業新尖兵',risk:'長期日間班；如果只想學純行銷，技術內容可能偏多。',url:'https://ttms.etraining.gov.tw/eYVTR/YipClassApply/'},
-{id:'d',title:'AI代理人與自動化工程師實務班',city:'新北市',mode:'實體',cat:'軟體開發／自動化',status:'即將截止',deadline:'2026-10-27',start:'2026-10-29',end:'2027-01-15',hours:400,cost:10000,market:95,fit:89,quality:85,employment:80,beginner:40,provider:'華梵大學',source:'青年職訓資源網／產業新尖兵',skills:['AI Agent','自動化','生成式AI','工程實作'],desc:'AI Agent、自動化與工程實作，偏把生成式AI做成可執行工作流。',elig:'15–29歲本國籍失業／待業青年；日間部在學生不適用產業新尖兵',risk:'內容新、職稱與工具快速變化，需確認實際工具棧與先備能力。',url:'https://ttms.etraining.gov.tw/eYVTR/YipClassApply/'},
-{id:'e',title:'企劃人的 AI 設計實戰：快速生成提案素材與活動視覺',city:'新北市',mode:'實體',cat:'設計／影音／創意',status:'需確認',deadline:null,start:'2026-11-24',end:'2026-11-24',hours:2,cost:0,market:78,fit:68,quality:74,employment:40,beginner:90,provider:'新北市政府青年局／緯育',source:'新北市政府青年局',skills:['AI設計','提案','活動視覺'],desc:'2小時AI設計實作，適合快速補充企劃視覺產出能力。',elig:'優先18–40歲民眾；依名額正備取',risk:'短課不等於就業養成；截止日未明示。',url:'https://www.youth.ntpc.gov.tw/'},
-{id:'f',title:'青年學堂「溝通力」系列課程',city:'臺北市',mode:'實體',cat:'求職／職場軟實力',status:'需確認',deadline:null,start:'2026-10-24',end:'2026-11-14',hours:10,cost:0,market:62,fit:55,quality:73,employment:35,beginner:95,provider:'臺北市政府青年局',source:'臺北市政府青年局',skills:['溝通','人脈','自我介紹','衝突處理'],desc:'聚焦溝通、人脈與自我介紹，屬通用職場能力。',elig:'青年；各場次需事先報名',risk:'非職業技能養成；各場報名狀態需逐場確認。',url:'https://youth.gov.taipei/'},
-{id:'g',title:'AI 購物新時代：智慧選購與電商成長新商機',city:'線上',mode:'線上',cat:'數位行銷／電商',status:'需確認',deadline:null,start:'2026-10-29',end:'2026-10-29',hours:3,cost:0,market:82,fit:64,quality:66,employment:35,beginner:90,provider:'飛德科技有限公司',source:'經濟部新創圓夢網',skills:['AI商務','電商','成長策略'],desc:'AI導入購物體驗與電商成長，偏趨勢與案例型學習。',elig:'依主辦單位報名規定',risk:'單場講座，不等於完整就業訓練。',url:'https://startup.sme.gov.tw/'},
-{id:'h',title:'適性就業輔導促進就業計畫－臺中站',city:'臺中市',mode:'實體',cat:'求職／職場軟實力',status:'報名中',deadline:'2026-11-16',start:'2026-11-20',end:'2026-11-20',hours:3.5,cost:0,market:58,fit:48,quality:68,employment:60,beginner:95,provider:'臺中市政府／新譽管理',source:'臺中市政府就業服務',skills:['職涯規劃','求職','產業認識'],desc:'職涯講座與就業輔導，偏方向盤點而非硬技能。',elig:'以失業給付請領者、求職青年為主；需符合活動資格',risk:'對象資格有限制。',url:'https://1catchjob.taichung.gov.tw/'},
-{id:'i',title:'116年國立海洋生物博物館寒假實習活動',city:'屏東縣',mode:'實體',cat:'實習／職涯探索',status:'即將截止',deadline:'2026-10-30',start:null,end:null,hours:null,cost:0,market:45,fit:50,quality:70,employment:45,beginner:70,provider:'國立海洋生物博物館',source:'青年第一讚',skills:['實習','職涯探索','實務經驗'],desc:'寒假實習機會，重點是職涯探索與實務經驗。',elig:'依海生館正式實習公告資格',risk:'不是一般課程；需確認科系、期間與名額。',url:'https://youthfirst.yda.gov.tw/'},
-{id:'j',title:'AI高效行銷力實戰班',city:'高雄市',mode:'混合',cat:'數位行銷／電商',status:'已開課／需確認補報',deadline:null,start:'2026-10-17',end:'2026-11-21',hours:null,cost:null,market:89,fit:82,quality:78,employment:55,beginner:70,provider:'高雄市政府青年局／K-TV',source:'高雄市政府青年局',skills:['GAS','AI工具','行銷自動化'],desc:'Google Apps Script與AI工具，重點是行銷工作自動化。',elig:'年滿15歲以上；依該班招生規定',risk:'已開課，需確認是否可補報；費用未完整公開。',url:'https://youth.kcg.gov.tw/'},
-{id:'k',title:'半導體資安大學院：藍隊演練進階班',city:'地點待確認',mode:'實體',cat:'資安／半導體',status:'需確認',deadline:null,start:'2026-10-29',end:'2026-10-29',hours:7,cost:null,market:90,fit:82,quality:75,employment:58,beginner:35,provider:'中華民國全國創新創業總會',source:'經濟部新創圓夢網',skills:['資安藍隊','半導體資安','防禦演練'],desc:'半導體情境的藍隊防禦進階訓練。',elig:'依主辦單位規定',risk:'進階班，零基礎不一定適合；費用需確認。',url:'https://startup.sme.gov.tw/'},
-{id:'l',title:'U29青少年劇場｜即興喜劇表演工作坊',city:'臺中市',mode:'實體',cat:'設計／影音／創意',status:'需確認',deadline:null,start:'2026-11-14',end:'2026-11-15',hours:16,cost:null,market:40,fit:45,quality:72,employment:30,beginner:85,provider:'臺中市政府文化局／港區藝術中心',source:'臺中市政府文化局',skills:['表演','即興','創造力','團隊合作'],desc:'兩日即興喜劇工作坊，訓練表達、創造與團隊合作。',elig:'18–29歲青年',risk:'非一般就業職訓；費用與名額需確認。',url:'https://tcsac.taichung.gov.tw/'}
-];
+var COURSES = Array.isArray(window.COURSES) ? window.COURSES : [];
+var TODAY = '2026-10-23';
 var selected=[],applied='',goal='balanced',diff=false,quick={open:false,free:false,low:false,intense:false,online:false};
-function $(id){return document.getElementById(id)}function esc(s){return String(s==null?'未公開／需確認':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
-function tband(c){if(c.hours==null)return'unknown';if(c.hours<=8)return'micro';if(c.hours<=40)return'short';if(c.hours<=120)return'mid';if(c.hours<=300)return'intense';return'long'}function tlabel(c){return {unknown:'時數未公開',micro:'單次講座／體驗',short:'短期工作坊',mid:'技能進修',intense:'密集培訓',long:'長期職訓'}[tband(c)]}
-function costScore(c){if(c.cost===0)return 100;if(c.cost==null)return 45;return Math.max(20,100-Math.min(c.cost,20000)/250)}function timeScore(c){if(c.hours==null)return 50;if(c.hours<=8)return 100;if(c.hours<=40)return 90;if(c.hours<=120)return 75;if(c.hours<=300)return 55;return 35}
-function score(c){if(goal==='job')return Math.round(c.market*.3+c.fit*.3+c.employment*.25+timeScore(c)*.15);if(goal==='cost')return Math.round(costScore(c)*.6+c.market*.15+c.fit*.1+timeScore(c)*.15);if(goal==='beginner')return Math.round(c.beginner*.45+costScore(c)*.2+timeScore(c)*.15+c.quality*.1+c.market*.1);if(goal==='market')return Math.round(c.market*.7+c.fit*.3);return Math.round(c.market*.3+c.fit*.25+c.quality*.2+costScore(c)*.15+c.employment*.1)}
-function openish(c){return c.status==='報名中'||c.status==='即將截止'||c.status==='需確認'}function money(c){return c.cost===0?'免費':c.cost==null?'未公開／需確認':'NT$'+c.cost.toLocaleString()}
-function list(){var q=applied.toLowerCase(),a=COURSES.filter(function(c){var txt=(c.title+' '+c.provider+' '+c.source+' '+c.skills.join(' ')).toLowerCase();return(!q||txt.indexOf(q)>=0)&&(!$('city').value||c.city===$('city').value)&&(!$('cat').value||c.cat===$('cat').value)&&(!$('status').value||c.status===$('status').value)&&(!$('time').value||tband(c)===$('time').value)&&(!quick.open||openish(c))&&(!quick.free||c.cost===0)&&(!quick.low||(c.hours!=null&&c.hours<=40))&&(!quick.intense||(c.hours!=null&&c.hours>=120))&&(!quick.online||(c.mode==='線上'||c.mode==='混合'))});var s=$('sort').value;if(s==='score')a.sort(function(x,y){return score(y)-score(x)});if(s==='deadline')a.sort(function(x,y){return (x.deadline||'9999')>(y.deadline||'9999')?1:-1});if(s==='market')a.sort(function(x,y){return y.market-x.market});if(s==='hours')a.sort(function(x,y){return (x.hours==null?99999:x.hours)-(y.hours==null?99999:y.hours)});return a}
-function render(){var a=list();$('count').textContent='顯示 '+a.length+' / '+COURSES.length+' 筆';$('grid').innerHTML=a.map(function(c){var sel=selected.indexOf(c.id)>=0;return '<article class="card '+(sel?'sel':'')+'"><div class="row"><span class="tag">'+esc(c.cat)+'</span><span class="status '+(c.status==='報名中'?'good':'warn')+'">'+esc(c.status)+'</span></div><h3>'+esc(c.title)+'</h3><div class="desc">'+esc(c.desc)+'</div><div class="row"><div class="score">'+score(c)+'<small>/100</small></div><div class="sub">'+esc(c.city)+' · '+esc(c.mode)+'<br>'+esc(tlabel(c))+'</div></div><div class="metrics"><div class="metric"><small>自付</small><b>'+esc(money(c))+'</b></div><div class="metric"><small>總時數</small><b>'+(c.hours==null?'未公開':esc(c.hours)+'h')+'</b></div><div class="metric"><small>截止</small><b>'+esc(c.deadline||'未公開')+'</b></div><div class="metric"><small>市場需求</small><b>'+c.market+'/100</b></div></div><div class="skills">'+c.skills.slice(0,4).map(function(x){return'<span class="skill">'+esc(x)+'</span>'}).join('')+'</div><div class="actions"><button class="btn" onclick="details(\''+c.id+'\')">查看整理</button><button class="btn '+(sel?'':'primary')+'" onclick="toggle(\''+c.id+'\')">'+(sel?'已加入比較':'＋加入比較')+'</button></div></article>'}).join('')||'<div class="box">沒有符合條件的課程。</div>'}
+
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s==null?'未公開／需確認':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+function tband(c){if(c.hours==null)return'unknown';if(c.hours<=8)return'micro';if(c.hours<=40)return'short';if(c.hours<=120)return'mid';if(c.hours<=300)return'intense';return'long'}
+function tlabel(c){return {unknown:'時數未公開',micro:'單次講座／體驗',short:'短期工作坊',mid:'技能進修',intense:'密集培訓',long:'長期職訓'}[tband(c)]}
+function dateObj(s){return s?new Date(s+'T00:00:00+08:00'):null}
+function daysBetween(a,b){return Math.round((dateObj(b)-dateObj(a))/86400000)}
+function displayStatus(c){
+  if(c.deadline && c.deadline < TODAY) return '已截止';
+  if(c.start && c.start < TODAY && (!c.end || c.end >= TODAY)) return '已開課／需確認補報';
+  if(c.deadline){
+    var d=daysBetween(TODAY,c.deadline);
+    if(d>=0 && d<=7) return '即將截止';
+    if(d>7) return '報名中';
+  }
+  if(c.start && c.start >= TODAY) return '需確認';
+  if(c.end && c.end >= TODAY) return '需確認';
+  return '需確認';
+}
+function openish(c){var s=displayStatus(c);return s==='報名中'||s==='即將截止'||s==='需確認'||s==='已開課／需確認補報'}
+function money(c){return c.cost===0?'免費':c.cost==null?'未公開／需確認':'NT$'+Number(c.cost).toLocaleString()}
+function costScore(c){if(c.cost===0)return 100;if(c.cost==null)return 50;if(c.cost<=1000)return 90;if(c.cost<=5000)return 80;if(c.cost<=10000)return 70;return 55}
+function depthScore(c){if(c.hours==null)return 45;if(c.hours<=8)return 35;if(c.hours<=40)return 50;if(c.hours<=120)return 65;if(c.hours<=300)return 80;return 90}
+function timeEase(c){if(c.hours==null)return 50;if(c.hours<=8)return 100;if(c.hours<=40)return 90;if(c.hours<=120)return 75;if(c.hours<=300)return 55;return 35}
+function dataScore(c){return c.level==='A'?95:c.level==='B'?75:55}
+function beginnerScore(c){if(c.beginner===true)return 90;if(c.beginner===false)return 35;return c.hours!=null&&c.hours<=8?80:50}
+function jobSupportScore(c){return c.jobSupport===true?90:55}
+function marketEst(c){
+  var m={
+   'AI／數位科技':92,'軟體開發／自動化':90,'數據分析／行銷科技':90,'數位行銷／電商':82,
+   '資安／半導體':91,'工業／無人機':84,'創業／商業':65,'求職／職場軟實力':60,
+   '實習／職涯探索':62,'設計／影音／創意':65,'生活／自我發展':40,'志願服務／公共參與':45
+  }; return m[c.cat]||55
+}
+function score(c){
+  var market=marketEst(c), depth=depthScore(c), cost=costScore(c), data=dataScore(c), job=jobSupportScore(c), beginner=beginnerScore(c), time=timeEase(c);
+  if(goal==='job') return Math.round(market*.32+depth*.23+job*.25+time*.10+data*.10);
+  if(goal==='cost') return Math.round(cost*.50+time*.20+market*.15+data*.15);
+  if(goal==='beginner') return Math.round(beginner*.40+cost*.20+time*.15+market*.10+data*.15);
+  if(goal==='market') return Math.round(market*.70+depth*.15+data*.15);
+  return Math.round(market*.28+depth*.20+cost*.18+job*.14+data*.20);
+}
+function levelText(c){return c.level==='A'?'A 完整明細':c.level==='B'?'B 官方列表':'C 彙整待補'}
+function list(){
+  var q=applied.toLowerCase();
+  var a=COURSES.filter(function(c){
+    var txt=(c.title+' '+c.provider+' '+c.source+' '+(c.skills||[]).join(' ')+' '+c.cat).toLowerCase();
+    return(!q||txt.indexOf(q)>=0)
+      &&(!$('city').value||c.city===$('city').value)
+      &&(!$('cat').value||c.cat===$('cat').value)
+      &&(!$('status').value||displayStatus(c)===$('status').value)
+      &&(!$('time').value||tband(c)===$('time').value)
+      &&(!quick.open||openish(c))
+      &&(!quick.free||c.cost===0)
+      &&(!quick.low||(c.hours!=null&&c.hours<=40))
+      &&(!quick.intense||(c.hours!=null&&c.hours>=120))
+      &&(!quick.online||(c.mode==='線上'||c.mode==='混合'));
+  });
+  var s=$('sort').value;
+  if(s==='score')a.sort(function(x,y){return score(y)-score(x)});
+  if(s==='deadline')a.sort(function(x,y){return (x.deadline||'9999')>(y.deadline||'9999')?1:-1});
+  if(s==='market')a.sort(function(x,y){return marketEst(y)-marketEst(x)});
+  if(s==='hours')a.sort(function(x,y){return (x.hours==null?99999:x.hours)-(y.hours==null?99999:y.hours)});
+  return a
+}
+function render(){
+  $('totalCount').textContent=COURSES.length;
+  var a=list();$('count').textContent='顯示 '+a.length+' / '+COURSES.length+' 筆';
+  $('grid').innerHTML=a.map(function(c){
+    var sel=selected.indexOf(c.id)>=0,s=displayStatus(c);
+    return '<article class="card '+(sel?'sel':'')+'">'
+      +'<div class="row"><div style="display:flex;gap:5px;flex-wrap:wrap"><span class="tag">'+esc(c.cat)+'</span><span class="level '+esc(c.level||'C')+'">'+esc(levelText(c))+'</span></div><span class="status '+(s==='報名中'?'good':'warn')+'">'+esc(s)+'</span></div>'
+      +'<h3>'+esc(c.title)+'</h3><div class="desc">'+esc(c.desc)+'</div>'
+      +'<div class="row"><div class="score">'+score(c)+'<small>/100</small></div><div class="sub">'+esc(c.city)+' · '+esc(c.mode)+'<br>'+esc(tlabel(c))+'</div></div>'
+      +'<div class="metrics"><div class="metric"><small>自付</small><b>'+esc(money(c))+'</b></div><div class="metric"><small>總時數</small><b>'+(c.hours==null?'未公開':esc(c.hours)+'h')+'</b></div><div class="metric"><small>截止</small><b>'+esc(c.deadline||'未公開')+'</b></div><div class="metric"><small>類別市場趨勢</small><b>'+marketEst(c)+'/100</b></div></div>'
+      +'<div class="skills">'+(c.skills||[]).slice(0,4).map(function(x){return'<span class="skill">'+esc(x)+'</span>'}).join('')+'</div>'
+      +'<div class="actions"><button class="btn" onclick="details(\''+c.id+'\')">查看整理</button><button class="btn '+(sel?'':'primary')+'" onclick="toggle(\''+c.id+'\')">'+(sel?'已加入比較':'＋加入比較')+'</button></div></article>'
+  }).join('')||'<div class="box">沒有符合條件的課程。</div>'
+}
 function submit(){applied=$('search').value.trim();render();$('feedback').textContent=applied?'已搜尋「'+applied+'」：找到 '+list().length+' 筆。':'已套用目前篩選：找到 '+list().length+' 筆。'}
-function toggle(id){var i=selected.indexOf(id);if(i>=0)selected.splice(i,1);else{if(selected.length>=3){alert('最多比較 3 門');return}selected.push(id)}dock();render()}function dock(){$('dock').classList.toggle('show',selected.length>0);$('chips').innerHTML=selected.map(function(id){var c=COURSES.find(function(x){return x.id===id});return'<span class="chip">'+esc(c.title)+' <button onclick="toggle(\''+id+'\')">×</button></span>'}).join('')}
-function details(id){var c=COURSES.find(function(x){return x.id===id});$('drawerBody').innerHTML='<h2>'+esc(c.title)+'</h2><div class="section"><p><b>主辦／承訓：</b>'+esc(c.provider)+'</p><p><b>來源：</b>'+esc(c.source)+'</p><p><b>資格：</b>'+esc(c.elig)+'</p><p><b>期間：</b>'+esc(c.start)+' ～ '+esc(c.end)+'</p><p><b>投入：</b>'+esc(tlabel(c))+'；'+(c.hours==null?'時數未公開':esc(c.hours)+' 小時')+'</p><p><b>費用：</b>'+esc(money(c))+'</p></div><div class="section"><p><b>主要技能：</b>'+esc(c.skills.join('、'))+'</p><p><b>市場需求：</b>'+c.market+'/100</p><p><b>注意：</b>'+esc(c.risk)+'</p></div><a class="btn primary" style="display:inline-block;text-decoration:none" target="_blank" href="'+esc(c.url)+'">官方來源 ↗</a>';$('back').classList.add('show');$('drawer').classList.add('show')}
+function toggle(id){var i=selected.indexOf(id);if(i>=0)selected.splice(i,1);else{if(selected.length>=3){alert('最多比較 3 門');return}selected.push(id)}dock();render()}
+function dock(){$('dock').classList.toggle('show',selected.length>0);$('chips').innerHTML=selected.map(function(id){var c=COURSES.find(function(x){return x.id===id});return'<span class="chip">'+esc(c.title)+' <button onclick="toggle(\''+id+'\')">×</button></span>'}).join('')}
+function details(id){
+  var c=COURSES.find(function(x){return x.id===id}),s=displayStatus(c);
+  $('drawerBody').innerHTML='<h2>'+esc(c.title)+'</h2>'
+   +'<div class="section"><p><b>資料層級：</b>'+esc(levelText(c))+'</p><p><b>狀態：</b>'+esc(s)+'</p><p><b>主辦／承訓：</b>'+esc(c.provider)+'</p><p><b>來源：</b>'+esc(c.source)+'</p><p><b>資格：</b>'+esc(c.elig)+'</p><p><b>期間：</b>'+esc(c.start)+' ～ '+esc(c.end)+'</p><p><b>投入：</b>'+esc(tlabel(c))+'；'+(c.hours==null?'時數未公開':esc(c.hours)+' 小時')+'</p><p><b>費用：</b>'+esc(money(c))+'</p></div>'
+   +'<div class="section"><p><b>主要技能：</b>'+esc((c.skills||[]).join('、'))+'</p><p><b>類別市場趨勢估算：</b>'+marketEst(c)+'/100</p><p><b>注意：</b>'+esc(c.risk)+'</p><p style="color:#9aa7ba"><b>說明：</b>市場分數是依職類趨勢做的相對估算，不是此課程的即時職缺數或官方就業率。</p></div>'
+   +'<a class="btn primary" style="display:inline-block;text-decoration:none" target="_blank" href="'+esc(c.url)+'">官方／原始來源 ↗</a>';
+  $('back').classList.add('show');$('drawer').classList.add('show')
+}
 function closeDrawer(){$('back').classList.remove('show');$('drawer').classList.remove('show')}
 function compare(){if(selected.length<2){alert('至少選 2 門課');return}$('modal').classList.add('show');renderCompare()}
-function renderCompare(){var cs=selected.map(function(id){return COURSES.find(function(x){return x.id===id})}).sort(function(a,b){return score(b)-score(a)});var rows=[['綜合分數',function(c){return score(c)},'high'],['地點',function(c){return c.city}],['狀態',function(c){return c.status}],['資格',function(c){return c.elig}],['截止',function(c){return c.deadline||'未公開'}],['投入型態',function(c){return tlabel(c)}],['總時數',function(c){return c.hours==null?'未公開':c.hours+'h'},'low'],['自付',function(c){return money(c)}],['市場需求',function(c){return c.market},'high'],['技能吻合',function(c){return c.fit},'high'],['就業銜接',function(c){return c.employment},'high'],['零基礎友善',function(c){return c.beginner},'high'],['技能',function(c){return c.skills.join('、')}],['機構',function(c){return c.provider}],['注意事項',function(c){return c.risk}]];if(diff)rows=rows.filter(function(r){var vs=cs.map(function(c){return String(r[1](c))});return new Set(vs).size>1});var h='<tr><th>比較項目</th>'+cs.map(function(c){return'<th>'+esc(c.title)+'<br><small>'+score(c)+'分</small></th>'}).join('')+'</tr>';var b=rows.map(function(r){var vals=cs.map(function(c){return r[1](c)}),best=-1;if(r[2]==='high'){var nums=vals.map(Number);best=nums.indexOf(Math.max.apply(null,nums))}if(r[2]==='low'){var hs=cs.map(function(c){return c.hours==null?99999:c.hours});best=hs.indexOf(Math.min.apply(null,hs))}return'<tr><td><b>'+r[0]+'</b></td>'+vals.map(function(v,i){return'<td class="'+(i===best?'best':'')+'">'+esc(v)+(i===best&&r[2]?' ✓':'')+'</td>'}).join('')+'</tr>'}).join('');$('table').innerHTML=h+b;var w=cs[0];$('insight').innerHTML='<b>目前首選：'+esc(w.title)+'</b>（'+score(w)+' 分）。依目前目標，這門課的市場需求、技能吻合、成本／時間或入門門檻組合較有利。請仍以官方資格與最新報名狀態為準。'}
+function renderCompare(){
+  var cs=selected.map(function(id){return COURSES.find(function(x){return x.id===id})}).sort(function(a,b){return score(b)-score(a)});
+  var rows=[
+   ['綜合分數',function(c){return score(c)},'high'],
+   ['資料層級',function(c){return levelText(c)}],
+   ['地點',function(c){return c.city}],['狀態',function(c){return displayStatus(c)}],
+   ['資格',function(c){return c.elig}],['截止',function(c){return c.deadline||'未公開'}],
+   ['投入型態',function(c){return tlabel(c)}],['總時數',function(c){return c.hours==null?'未公開':c.hours+'h'},'low'],
+   ['自付',function(c){return money(c)}],['類別市場趨勢',function(c){return marketEst(c)},'high'],
+   ['訓練深度',function(c){return depthScore(c)},'high'],['就業銜接支援',function(c){return c.jobSupport===true?'有明示':'未明示'}],
+   ['零基礎友善',function(c){return c.beginner===true?'明示友善':c.beginner===false?'有門檻':'未能確認'}],
+   ['技能',function(c){return (c.skills||[]).join('、')}],['機構',function(c){return c.provider}],['注意事項',function(c){return c.risk}]
+  ];
+  if(diff)rows=rows.filter(function(r){var vs=cs.map(function(c){return String(r[1](c))});return new Set(vs).size>1});
+  var h='<tr><th>比較項目</th>'+cs.map(function(c){return'<th>'+esc(c.title)+'<br><small>'+score(c)+'分 · '+esc(levelText(c))+'</small></th>'}).join('')+'</tr>';
+  var b=rows.map(function(r){var vals=cs.map(function(c){return r[1](c)}),best=-1;if(r[2]==='high'){var nums=vals.map(Number);best=nums.indexOf(Math.max.apply(null,nums))}if(r[2]==='low'){var hs=cs.map(function(c){return c.hours==null?99999:c.hours});best=hs.indexOf(Math.min.apply(null,hs))}return'<tr><td><b>'+r[0]+'</b></td>'+vals.map(function(v,i){return'<td class="'+(i===best?'best':'')+'">'+esc(v)+(i===best&&r[2]?' ✓':'')+'</td>'}).join('')+'</tr>'}).join('');
+  $('table').innerHTML=h+b;var w=cs[0];
+  $('insight').innerHTML='<b>目前首選：'+esc(w.title)+'</b>（'+score(w)+' 分）。這是依目前目標做的相對決策指標；市場面採職類趨勢估算，缺漏欄位不會被補成假數據。報名前仍請點官方來源確認最新資格與名額。'
+}
 $('apply').onclick=submit;$('search').onkeydown=function(e){if(e.key==='Enter')submit()};['city','cat','status','time','sort'].forEach(function(id){$(id).onchange=render});
 function qbtn(id,key){$(id).onclick=function(){quick[key]=!quick[key];$(id).classList.toggle('on',quick[key]);render()}}qbtn('openOnly','open');qbtn('freeOnly','free');qbtn('lowOnly','low');qbtn('intenseOnly','intense');qbtn('onlineOnly','online');
-$('reset').onclick=function(){$('search').value='';applied='';['city','cat','status','time'].forEach(function(id){$(id).value=''});$('sort').value='score';quick={open:false,free:false,low:false,intense:false,online:false};document.querySelectorAll('.q').forEach(function(x){x.classList.remove('on')});render();$('feedback').textContent='已重設全部條件。'};$('clear').onclick=function(){selected=[];dock();render()};$('compare').onclick=compare;$('closeModal').onclick=function(){$('modal').classList.remove('show')};$('closeDrawer').onclick=closeDrawer;$('back').onclick=closeDrawer;$('diff').onclick=function(){diff=!diff;$('diff').textContent='只看差異：'+(diff?'開':'關');renderCompare()};document.querySelectorAll('[data-goal]').forEach(function(b){b.onclick=function(){document.querySelectorAll('[data-goal]').forEach(function(x){x.classList.remove('on')});b.classList.add('on');goal=b.getAttribute('data-goal');render();if($('modal').classList.contains('show'))renderCompare()}});render();
+$('reset').onclick=function(){$('search').value='';applied='';['city','cat','status','time'].forEach(function(id){$(id).value=''});$('sort').value='score';quick={open:false,free:false,low:false,intense:false,online:false};document.querySelectorAll('.q').forEach(function(x){x.classList.remove('on')});render();$('feedback').textContent='已重設全部條件。'};
+$('clear').onclick=function(){selected=[];dock();render()};$('compare').onclick=compare;$('closeModal').onclick=function(){$('modal').classList.remove('show')};$('closeDrawer').onclick=closeDrawer;$('back').onclick=closeDrawer;
+$('diff').onclick=function(){diff=!diff;$('diff').textContent='只看差異：'+(diff?'開':'關');renderCompare()};
+document.querySelectorAll('[data-goal]').forEach(function(b){b.onclick=function(){document.querySelectorAll('[data-goal]').forEach(function(x){x.classList.remove('on')});b.classList.add('on');goal=b.getAttribute('data-goal');render();if($('modal').classList.contains('show'))renderCompare()}});
+render();
 </script></body></html>
