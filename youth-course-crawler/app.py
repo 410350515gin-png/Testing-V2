@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse, urlencode
 from datetime import datetime, timezone, timedelta
 import threading, json, os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 app = Flask(__name__)
 UA = "Mozilla/5.0 (compatible; YouthCourseRadar/1.0; +https://youth-course-radar-tw-2026.onrender.com)"
@@ -289,54 +290,92 @@ def scrape_kaohsiung():
     r=get(url); soup=BeautifulSoup(r.text,"html.parser")
     for a in soup.find_all("a",href=True):
         href=absolute(r.url,a["href"]); title=clean(a.get_text(" ",strip=True))
-        if not title or href in seen: continue
-        parent=a.find_parent(["li","div","article","tr"])
-        context=clean(parent.get_text(" ",strip=True)) if parent else title
-        if not re.search(r'課程時間|課程地點|費用|申請資格',context): continue
-        if title in ["找課程","找資源","更多"]: continue
-        items.append({"source":"高雄市政府青年局／找課程","title":title,"url":href,"dates":extract_dates(context),"context":context[:1800]})
+        if not title or href in seen or title in ["找課程","找資源","更多"]: continue
+        # Walk upward until the entire resource card is captured.
+        node=a
+        context=title
+        for _ in range(7):
+            node=node.parent if node else None
+            if not node: break
+            txt=clean(node.get_text(" ",strip=True))
+            if "課程時間" in txt and ("課程地點" in txt or "申請資格" in txt):
+                context=txt; break
+        if not re.search(r'課程時間',context): continue
+        items.append({"source":"高雄市政府青年局／找課程","title":title,"url":href,"dates":extract_dates(context),"context":context[:2200]})
         seen.add(href)
     return items
 
+def _parse_sme_page(page):
+    r=get(SOURCES["smelearning"],params={"page":page,"price_sort":0})
+    soup=BeautifulSoup(r.text,"html.parser")
+    out=[]; seen=set()
+    for a in soup.find_all("a",href=True):
+        href=absolute(r.url,a["href"])
+        if "class.php?course=" not in href or href in seen: continue
+        node=a; context=clean(a.get_text(" ",strip=True)); heading=""
+        for _ in range(8):
+            node=node.parent if node else None
+            if not node: break
+            txt=clean(node.get_text(" ",strip=True))
+            h=node.find(["h2","h3","h4","h5"])
+            if h: heading=clean(h.get_text(" ",strip=True))
+            if re.search(r'\d+\s*分鐘',txt) and heading:
+                context=txt; break
+        title=heading or clean(a.get_text(" ",strip=True))
+        if not title or title in ["免費課程","收費課程"]: continue
+        mm=re.search(r'(\d{1,4})\s*分鐘',context)
+        mins=int(mm.group(1)) if mm else None
+        out.append({"source":"中小企業網路大學校","title":title,"url":href,"dates":[],"context":context[:1800],
+                    "hours":round(mins/60,2) if mins is not None else None,
+                    "cost":0 if "免費" in context else None,"mode":"線上"})
+        seen.add(href)
+    return out
+
 def scrape_smelearning():
     items=[]; seen=set()
-    for page in range(1,80):
-        r=get(SOURCES["smelearning"],params={"page":page,"price_sort":0})
-        soup=BeautifulSoup(r.text,"html.parser"); page_items=0
-        for a in soup.find_all("a",href=True):
-            href=absolute(r.url,a["href"]); title=clean(a.get_text(" ",strip=True))
-            if not href or href in seen or "smelearning.sme.gov.tw" not in href: continue
-            low=href.lower()
-            if not any(k in low for k in ["course","class","detail","learn"]): continue
-            parent=a.find_parent(["li","div","article","section"])
-            context=clean(parent.get_text(" ",strip=True)) if parent else title
-            if not re.search(r'分鐘|小時|免費|元|人已學習|課程',context): continue
-            if len(title)<3 and parent:
-                hh=parent.find(["h2","h3","h4","h5"])
-                title=clean(hh.get_text(" ",strip=True)) if hh else ""
-            if not title or title in ["所有課程","免費課程","課程分類"]: continue
-            mm=re.search(r'(\d{1,4})\s*分鐘',context)
-            mins=int(mm.group(1)) if mm else None
-            hours=round(mins/60,2) if mins is not None else None
-            cost=0 if "免費" in context else None
-            items.append({"source":"中小企業網路大學校","title":title,"url":href,"dates":[],"context":context[:1500],"hours":hours,"cost":cost,"mode":"線上"})
-            seen.add(href); page_items+=1
-        if page_items==0 and page>2: break
+    # Current official list has roughly 47 pages; fetch concurrently so full coverage is practical.
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        futs={ex.submit(_parse_sme_page,p):p for p in range(1,61)}
+        for fut in as_completed(futs):
+            try: rows=fut.result()
+            except Exception: continue
+            for x in rows:
+                if x["url"] in seen: continue
+                seen.add(x["url"]); items.append(x)
     return items
 
 def inspect_taiwanjobs():
     r=get(SOURCES["taiwanjobs_conditions"])
     soup=BeautifulSoup(r.text,"html.parser")
-    forms=[]
-    for f in soup.find_all("form"):
-        forms.append({"action":absolute(r.url,f.get("action")),"method":(f.get("method") or "get").lower(),
-                      "inputs":[{"name":i.get("name"),"value":i.get("value"),"type":i.get("type")} for i in f.find_all(["input","select"])[:80]]})
     scripts=[absolute(r.url,s.get("src")) for s in soup.find_all("script",src=True)]
     links=[]
     for a in soup.find_all("a",href=True):
         txt=clean(a.get_text(" ",strip=True)); href=absolute(r.url,a["href"])
-        if any(k in (txt+" "+href) for k in ["課程","course","training"]): links.append({"title":txt,"url":href})
-    return {"forms":forms[:10],"scripts":scripts[-30:],"links":links[:120],"html_len":len(r.text),"title":clean(soup.title.get_text(" ",strip=True)) if soup.title else ""}
+        if any(k in (txt+" "+href).lower() for k in ["課程","course","training"]):
+            links.append({"title":txt,"url":href})
+    controls=[]
+    for el in soup.find_all(["input","select","button","textarea"]):
+        if el.get("id") or el.get("name"):
+            controls.append({"tag":el.name,"id":el.get("id"),"name":el.get("name"),"value":el.get("value"),"type":el.get("type")})
+    hints=set()
+    raw=r.text
+    for pat in [r'["\']([^"\']*(?:course|api|condition|query|search)[^"\']*)["\']',r'url\s*:\s*["\']([^"\']+)']:
+        for m in re.finditer(pat,raw,re.I):
+            x=clean(m.group(1))
+            if 2<len(x)<300: hints.add(x)
+    # Inspect same-domain JS bundles for AJAX endpoint strings.
+    for js in scripts:
+        if "course.taiwanjobs.gov.tw" not in js: continue
+        try:
+            rr=get(js); txt=rr.text
+        except Exception: continue
+        for m in re.finditer(r'["\']([^"\']*(?:/course/|api/|ajax|conditions)[^"\']*)["\']',txt,re.I):
+            x=clean(m.group(1))
+            if 2<len(x)<300: hints.add(x)
+    return {"scripts":scripts[-30:],"links":links[:120],"controls":controls[:250],"hints":sorted(hints)[:250],
+            "html_len":len(r.text),"title":clean(soup.title.get_text(" ",strip=True)) if soup.title else ""}
+
+SCRAPERS=
 
 SCRAPERS={"ntpc":scrape_ntpc,"yip":scrape_yip,"startup":scrape_startup,"youthfirst":scrape_youthfirst,
           "taichung":scrape_taichung,"taipei":scrape_taipei,"kaohsiung":scrape_kaohsiung,"smelearning":scrape_smelearning}
@@ -356,7 +395,7 @@ def background_audit():
         print("CRAWL_SOURCE "+name+" "+json.dumps(result,ensure_ascii=False),flush=True)
     try:
         tj=inspect_taiwanjobs()
-        result={"ok":True,"forms":tj.get("forms",[])[:3],"scripts":len(tj.get("scripts",[])),"links":len(tj.get("links",[]))}
+        result={"ok":True,"scripts":len(tj.get("scripts",[])),"links":len(tj.get("links",[])),"controls":tj.get("controls",[])[:40],"hints":tj.get("hints",[])[:80]}
     except Exception as e:
         result={"ok":False,"error":repr(e)}
     summary["taiwanjobs"]=result
