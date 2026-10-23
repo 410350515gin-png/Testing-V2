@@ -7,7 +7,7 @@
 <style>
 :root{--bg:#0b1220;--p:#111827;--p2:#172033;--line:#29364c;--txt:#eef4ff;--mut:#9aa7ba;--g:#34d399;--b:#38bdf8;--y:#f59e0b;--r:#fb7185}
 *{box-sizing:border-box}body{margin:0;background:linear-gradient(#0b1220,#08101c);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif}button,input,select{font:inherit}
-header{position:sticky;top:0;z-index:20;background:rgba(8,16,29,.94);border-bottom:1px solid var(--line);backdrop-filter:blur(12px)}
+header{position:relative;z-index:1;background:rgba(8,16,29,.94);border-bottom:1px solid var(--line);backdrop-filter:blur(12px)}
 .wrap{max-width:1180px;margin:auto;padding:16px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px}.brand{font-size:20px;font-weight:900}.sub{font-size:12px;color:var(--mut)}
 .box{background:rgba(17,24,39,.88);border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:14px}.searchrow{display:grid;grid-template-columns:1fr auto;gap:9px}.filterrow{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-top:9px}.field{width:100%;background:#0d1525;color:var(--txt);border:1px solid #30405a;border-radius:11px;padding:11px}.go{border:0;border-radius:11px;padding:0 18px;background:linear-gradient(135deg,var(--g),var(--b));font-weight:900;color:#04110d;cursor:pointer}.feedback{min-height:18px;font-size:11px;color:#8cf0c0;margin-top:8px}
 .quick{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}.q{background:#111c2d;color:#c8d4e5;border:1px solid #30405a;border-radius:999px;padding:7px 10px;cursor:pointer;font-size:12px}.q.on{border-color:var(--g);color:#bdf7df;background:rgba(52,211,153,.1)}
@@ -20,7 +20,7 @@ header{position:sticky;top:0;z-index:20;background:rgba(8,16,29,.94);border-bott
 </style>
 </head>
 <body>
-<header><div class="wrap"><div class="top"><div><div class="brand">青年課程雷達 <span style="font-size:11px;color:#8cf0c0">Live v1</span></div><div class="sub">2026/10/23 台北時間快照 · 搜尋、縣市篩選、比較可直接操作</div></div><div class="sub">12 筆課程／機會</div></div>
+<header><div class="wrap"><div class="top"><div><div class="brand">青年課程雷達 <span style="font-size:11px;color:#8cf0c0">Live v1.1</span></div><div class="sub">2026/10/23 台北時間快照 · 搜尋、縣市篩選、比較可直接操作</div></div><div class="sub">12 筆課程／機會</div></div>
 <div class="box">
 <div class="searchrow"><input id="search" class="field" placeholder="搜尋 AI、Python、Java、行銷、機構…"><button id="apply" class="go">搜尋／套用篩選</button></div>
 <div class="filterrow">
