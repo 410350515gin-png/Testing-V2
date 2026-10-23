@@ -17,6 +17,7 @@ TODAY = "2026-10-23"
 
 SOURCES = {
     "taiwanjobs": "https://course.taiwanjobs.gov.tw/",
+    "taiwanjobs_conditions": "https://course.taiwanjobs.gov.tw/course/conditions",
     "yip": "https://ttms.etraining.gov.tw/eYVTR/YipClassApply",
     "youthfirst": "https://youthfirst.yda.gov.tw/index.php/subject/index/1",
     "startup": "https://startup.sme.gov.tw/home/modules/calendar/",
@@ -168,17 +169,12 @@ def scrape_startup():
 
 def scrape_youthfirst():
     items=[]; seen=set()
-    # first page exposes count; subsequent pages can have odd relative links, so harvest content IDs from HTML and pagination URLs.
-    todo=[SOURCES["youthfirst"]]; seen_pages=set()
-    while todo and len(seen_pages)<20:
-        url=todo.pop(0)
-        if url in seen_pages: continue
-        seen_pages.add(url)
+    for page in range(1,8):
+        url=f"https://youthfirst.yda.gov.tw/index.php/subject/index/1/{page}" if page>1 else SOURCES["youthfirst"]
         try:r=get(url)
         except Exception:continue
-        html=r.text
-        soup=BeautifulSoup(html,"html.parser")
-        # content links from anchors
+        soup=BeautifulSoup(r.text,"html.parser")
+        page_count=0
         for a in soup.find_all("a",href=True):
             raw=a.get("href") or ""
             m=re.search(r'(?:index\.php/)?subject/content/(\d+)', raw)
@@ -189,23 +185,11 @@ def scrape_youthfirst():
             title=clean(a.get_text(" ",strip=True))
             parent=a.find_parent(["li","div","article"])
             context=clean(parent.get_text(" ",strip=True)) if parent else title
-            if not title or len(title)<3:
-                title=f"青年第一讚資源 {cid}"
-            items.append({"source":"青年第一讚","title":title,"url":href,"dates":extract_dates(context),"context":context[:1000]})
-            seen.add(href)
-        # raw html fallback
-        for cid in re.findall(r'subject/content/(\d+)',html):
-            href=f"https://youthfirst.yda.gov.tw/index.php/subject/content/{cid}"
-            if href not in seen:
-                items.append({"source":"青年第一讚","title":f"青年第一讚資源 {cid}","url":href,"dates":[],"context":""})
-                seen.add(href)
-        # pagination links
-        for a in soup.find_all("a",href=True):
-            txt=clean(a.get_text(" ",strip=True))
-            if re.fullmatch(r'\d+',txt or ""):
-                href=absolute(r.url,a["href"])
-                if "subject/index" in href and href not in seen_pages and href not in todo:
-                    todo.append(href)
+            if not title or len(title)<3: title=f"青年第一讚資源 {cid}"
+            items.append({"source":"青年第一讚","title":title,"url":href,"dates":extract_dates(context),"context":context[:1200]})
+            seen.add(href); page_count+=1
+        if page>1 and page_count==0:
+            break
     return items
 
 def scrape_taichung():
@@ -267,42 +251,49 @@ def crawl_domain_candidates(start, domain, keywords, max_pages=120, max_depth=2)
     return items, len(seen_pages)
 
 def scrape_taipei():
-    seeds=[SOURCES["taipei"],"https://www.class.tcyd.gov.taipei/"]
-    all_items=[]; seen=set()
-    for seed in seeds:
-        items,_=crawl_domain_candidates(seed, urlparse(seed).netloc.replace("www.",""), ["課程","青年學堂","工作坊","講座","職涯","報名"],120,2)
-        for x in items:
-            if x["url"] in seen:continue
-            x["source"]="臺北市政府青年局";all_items.append(x);seen.add(x["url"])
-    return all_items
-
-def scrape_kaohsiung():
-    items=[];seen=set();todo=[SOURCES["kaohsiung"]];seen_pages=set()
-    while todo and len(seen_pages)<100:
-        url=todo.pop(0)
-        if url in seen_pages:continue
-        seen_pages.add(url)
+    items=[]; seen=set()
+    seeds=["https://class.tpyd.gov.taipei/","https://class.tpyd.gov.taipei/participate/?node=0"]
+    for url in seeds:
         try:r=get(url)
         except Exception:continue
         soup=BeautifulSoup(r.text,"html.parser")
         for a in soup.find_all("a",href=True):
             href=absolute(r.url,a["href"]); title=clean(a.get_text(" ",strip=True))
-            if "News_Content.aspx" in href:
-                if href not in seen and (title or re.search(r'[?&]s=\d+',href)):
-                    parent=a.find_parent(["li","div","article"])
-                    context=clean(parent.get_text(" ",strip=True)) if parent else title
-                    key=(title+" "+context).lower()
-                    if any(k.lower() in key for k in ["課程","培訓","工作坊","講座","報名","人才培育","找課程","ktv","k-tv","星團隊","新媒體","高速青春"]):
-                        items.append({"source":"高雄市政府青年局","title":title or "高雄青年課程","url":href,"dates":extract_dates(context),"context":context[:1000]})
-                        seen.add(href)
-                if href not in seen_pages and len(seen_pages)<100:
-                    todo.append(href)
-            elif any(x in href.lower() for x in ["news.aspx","activity","course"]) and href not in seen_pages:
-                todo.append(href)
+            if not title or href in seen: continue
+            parent=a.find_parent(["li","div","article","section"])
+            context=clean(parent.get_text(" ",strip=True)) if parent else title
+            if not re.search(r'報名|活動|課程|學堂|工作坊|講座',context): continue
+            if href.rstrip("/") in [r.url.rstrip("/"),"https://class.tpyd.gov.taipei/participate"]: continue
+            items.append({"source":"臺北市政府青年局","title":title,"url":href,"dates":extract_dates(context),"context":context[:1200]})
+            seen.add(href)
+    return items
+
+def scrape_kaohsiung():
+    items=[]; seen=set()
+    seeds=[
+      "https://youth.kcg.gov.tw/ResourceSearch.aspx?n=41&sms=10164",
+      "https://youth.kcg.gov.tw/News.aspx?n=293&sms=10305&PageSize=50&page=1",
+    ]
+    for url in seeds:
+        try:r=get(url)
+        except Exception:continue
+        soup=BeautifulSoup(r.text,"html.parser")
+        for a in soup.find_all("a",href=True):
+            href=absolute(r.url,a["href"]); title=clean(a.get_text(" ",strip=True))
+            if not title or href in seen: continue
+            parent=a.find_parent(["li","div","article","tr"])
+            context=clean(parent.get_text(" ",strip=True)) if parent else title
+            if "ResourceSearch" in r.url:
+                if not re.search(r'課程時間|課程地點|費用|申請資格|課程',context): continue
+            else:
+                if "News_Content.aspx" not in href: continue
+                if not re.search(r'課程|培訓|工作坊|講座|報名|人才培育|短影音|新媒體|行銷', title+" "+context): continue
+            items.append({"source":"高雄市政府青年局","title":title,"url":href,"dates":extract_dates(context),"context":context[:1500]})
+            seen.add(href)
     return items
 
 def inspect_taiwanjobs():
-    r=get(SOURCES["taiwanjobs"])
+    r=get(SOURCES["taiwanjobs_conditions"])
     soup=BeautifulSoup(r.text,"html.parser")
     forms=[]
     for f in soup.find_all("form"):
@@ -326,16 +317,18 @@ def background_audit():
         t=time.time()
         try:
             items=fn()
-            summary[name]={"ok":True,"count":len(items),"sample_titles":[x.get("title") for x in items[:3]],"seconds":round(time.time()-t,2)}
+            result={"ok":True,"count":len(items),"sample_titles":[x.get("title") for x in items[:5]],"seconds":round(time.time()-t,2)}
         except Exception as e:
-            summary[name]={"ok":False,"error":repr(e),"seconds":round(time.time()-t,2)}
+            result={"ok":False,"error":repr(e),"seconds":round(time.time()-t,2)}
+        summary[name]=result
+        print("CRAWL_SOURCE "+name+" "+json.dumps(result,ensure_ascii=False),flush=True)
     try:
         tj=inspect_taiwanjobs()
-        summary["taiwanjobs"]={"ok":True,"forms":len(tj.get("forms",[])),"scripts":len(tj.get("scripts",[])),"links":len(tj.get("links",[])),
-                               "form_actions":[x.get("action") for x in tj.get("forms",[])[:4]],
-                               "script_tail":tj.get("scripts",[])[-5:]}
+        result={"ok":True,"forms":tj.get("forms",[])[:3],"scripts":len(tj.get("scripts",[])),"links":len(tj.get("links",[]))}
     except Exception as e:
-        summary["taiwanjobs"]={"ok":False,"error":repr(e)}
+        result={"ok":False,"error":repr(e)}
+    summary["taiwanjobs"]=result
+    print("CRAWL_SOURCE taiwanjobs "+json.dumps(result,ensure_ascii=False),flush=True)
     print("CRAWL_STATUS "+json.dumps(summary,ensure_ascii=False),flush=True)
 
 @app.get("/")
