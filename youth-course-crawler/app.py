@@ -1,6 +1,7 @@
 
 from flask import Flask, jsonify, request
 import requests, re, time
+from curl_cffi import requests as cffi_requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse, urlencode
 from datetime import datetime, timezone, timedelta
@@ -8,6 +9,7 @@ import threading, json, os
 
 app = Flask(__name__)
 UA = "Mozilla/5.0 (compatible; YouthCourseRadar/1.0; +https://youth-course-radar-tw-2026.onrender.com)"
+requests.packages.urllib3.disable_warnings()
 S = requests.Session()
 S.headers.update({"User-Agent": UA, "Accept-Language":"zh-TW,zh;q=0.9,en;q=0.6"})
 
@@ -25,7 +27,22 @@ SOURCES = {
 }
 
 def get(url, params=None):
-    r = S.get(url, params=params, timeout=25, allow_redirects=True)
+    host = urlparse(url).netloc.lower()
+    headers = {
+        "User-Agent": UA,
+        "Accept-Language":"zh-TW,zh;q=0.9,en;q=0.6",
+        "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Cache-Control":"no-cache",
+        "Pragma":"no-cache",
+        "Upgrade-Insecure-Requests":"1",
+    }
+    protected = any(x in host for x in ["startup.sme.gov.tw","youthfirst.yda.gov.tw","1catchjob.taichung.gov.tw","youth.kcg.gov.tw"])
+    if protected:
+        r = cffi_requests.get(url, params=params, headers=headers, timeout=30, allow_redirects=True, verify=False, impersonate="chrome124")
+        if r.status_code >= 400:
+            r.raise_for_status()
+        return r
+    r = S.get(url, params=params, headers=headers, timeout=30, allow_redirects=True, verify=False)
     r.raise_for_status()
     r.encoding = r.apparent_encoding or r.encoding
     return r
@@ -150,42 +167,76 @@ def scrape_startup():
     return items
 
 def scrape_youthfirst():
-    items=[]; seen=set(); empty=0
-    # try common pagination patterns
-    for page in range(1,30):
-        candidates=[
-            (SOURCES["youthfirst"],{"page":page}),
-            ("https://youthfirst.yda.gov.tw/index.php/subject/index/1/"+str(page),None)
-        ]
-        page_found=0
-        for url,params in candidates:
-            try:r=get(url,params=params)
-            except Exception:continue
-            soup=BeautifulSoup(r.text,"html.parser")
-            for a in soup.find_all("a",href=True):
-                href=absolute(r.url,a["href"]); title=clean(a.get_text(" ",strip=True))
-                if "/subject/content/" not in href or not title or href in seen: continue
-                context=clean(a.parent.get_text(" ",strip=True)) if a.parent else title
-                items.append({"source":"青年第一讚","title":title,"url":href,"dates":extract_dates(context),"context":context[:600]})
-                seen.add(href); page_found+=1
-        if page_found==0: empty+=1
-        else: empty=0
-        if empty>=2 and page>3: break
+    items=[]; seen=set()
+    # first page exposes count; subsequent pages can have odd relative links, so harvest content IDs from HTML and pagination URLs.
+    todo=[SOURCES["youthfirst"]]; seen_pages=set()
+    while todo and len(seen_pages)<20:
+        url=todo.pop(0)
+        if url in seen_pages: continue
+        seen_pages.add(url)
+        try:r=get(url)
+        except Exception:continue
+        html=r.text
+        soup=BeautifulSoup(html,"html.parser")
+        # content links from anchors
+        for a in soup.find_all("a",href=True):
+            raw=a.get("href") or ""
+            m=re.search(r'(?:index\.php/)?subject/content/(\d+)', raw)
+            if not m: continue
+            cid=m.group(1)
+            href=f"https://youthfirst.yda.gov.tw/index.php/subject/content/{cid}"
+            if href in seen: continue
+            title=clean(a.get_text(" ",strip=True))
+            parent=a.find_parent(["li","div","article"])
+            context=clean(parent.get_text(" ",strip=True)) if parent else title
+            if not title or len(title)<3:
+                title=f"青年第一讚資源 {cid}"
+            items.append({"source":"青年第一讚","title":title,"url":href,"dates":extract_dates(context),"context":context[:1000]})
+            seen.add(href)
+        # raw html fallback
+        for cid in re.findall(r'subject/content/(\d+)',html):
+            href=f"https://youthfirst.yda.gov.tw/index.php/subject/content/{cid}"
+            if href not in seen:
+                items.append({"source":"青年第一讚","title":f"青年第一讚資源 {cid}","url":href,"dates":[],"context":""})
+                seen.add(href)
+        # pagination links
+        for a in soup.find_all("a",href=True):
+            txt=clean(a.get_text(" ",strip=True))
+            if re.fullmatch(r'\d+',txt or ""):
+                href=absolute(r.url,a["href"])
+                if "subject/index" in href and href not in seen_pages and href not in todo:
+                    todo.append(href)
     return items
 
 def scrape_taichung():
-    items=[];seen=set()
-    # Default + likely activity pages; form-based pagination may not expose all, but detail links are harvested.
-    for url in [SOURCES["taichung"],"https://1catchjob.taichung.gov.tw/activity.aspx","https://1catchjob.taichung.gov.tw/Activity.aspx"]:
+    items=[]; seen=set(); urls=[
+        SOURCES["taichung"],
+        "https://1catchjob.taichung.gov.tw/more.aspx?cat=new",
+        "https://1catchjob.taichung.gov.tw/more.aspx?cat=hot",
+        "https://1catchjob.taichung.gov.tw/calendar.aspx?cat=21",
+    ]
+    for url in urls:
         try:r=get(url)
         except Exception:continue
-        soup=BeautifulSoup(r.text,"html.parser")
+        html=r.text; soup=BeautifulSoup(html,"html.parser")
+        # anchor route
         for a in soup.find_all("a",href=True):
-            href=absolute(r.url,a["href"]); title=clean(a.get_text(" ",strip=True))
-            if "detail.aspx" not in href.lower() or not title or href in seen: continue
-            context=clean(a.parent.get_text(" ",strip=True)) if a.parent else title
-            items.append({"source":"臺中市就業服務一鍵Catch","title":title,"url":href,"dates":extract_dates(context),"context":context[:600]})
+            raw=a.get("href") or ""
+            m=re.search(r'detail\.aspx\?act=(\d+)',raw,re.I)
+            if not m: continue
+            aid=m.group(1); href=f"https://1catchjob.taichung.gov.tw/detail.aspx?act={aid}"
+            if href in seen: continue
+            title=clean(a.get_text(" ",strip=True))
+            parent=a.find_parent(["li","div","tr","article"])
+            context=clean(parent.get_text(" ",strip=True)) if parent else title
+            items.append({"source":"臺中市就業服務一鍵Catch","title":title or f"臺中就業活動 {aid}","url":href,"dates":extract_dates(context),"context":context[:1000]})
             seen.add(href)
+        # raw HTML fallback
+        for aid in re.findall(r'detail\.aspx\?act=(\d+)',html,re.I):
+            href=f"https://1catchjob.taichung.gov.tw/detail.aspx?act={aid}"
+            if href not in seen:
+                items.append({"source":"臺中市就業服務一鍵Catch","title":f"臺中就業活動 {aid}","url":href,"dates":[],"context":""})
+                seen.add(href)
     return items
 
 def crawl_domain_candidates(start, domain, keywords, max_pages=120, max_depth=2):
@@ -207,7 +258,7 @@ def crawl_domain_candidates(start, domain, keywords, max_pages=120, max_depth=2)
             key=(title+" "+href+" "+context).lower()
             if any(k.lower() in key for k in keywords):
                 if href not in item_urls and title and len(title)>=4:
-                    items.append({"title":title,"url":href,"dates":extract_dates(context),"context":context[:600]})
+                    items.append({"title":title,"url":href,"dates":extract_dates(context),"context":context[:900]})
                     item_urls.add(href)
                 if depth<max_depth and href not in seen_pages and href.startswith("http"):
                     todo.append((href,depth+1))
@@ -216,13 +267,38 @@ def crawl_domain_candidates(start, domain, keywords, max_pages=120, max_depth=2)
     return items, len(seen_pages)
 
 def scrape_taipei():
-    items,pages=crawl_domain_candidates(SOURCES["taipei"],"youth.gov.taipei",["課程","青年學堂","工作坊","講座","職涯"],90,2)
-    for x in items:x["source"]="臺北市政府青年局"
-    return items
+    seeds=[SOURCES["taipei"],"https://www.class.tcyd.gov.taipei/"]
+    all_items=[]; seen=set()
+    for seed in seeds:
+        items,_=crawl_domain_candidates(seed, urlparse(seed).netloc.replace("www.",""), ["課程","青年學堂","工作坊","講座","職涯","報名"],120,2)
+        for x in items:
+            if x["url"] in seen:continue
+            x["source"]="臺北市政府青年局";all_items.append(x);seen.add(x["url"])
+    return all_items
 
 def scrape_kaohsiung():
-    items,pages=crawl_domain_candidates(SOURCES["kaohsiung"],"youth.kcg.gov.tw",["課程","培訓","工作坊","講座","K-TV","星團隊","新媒體"],120,2)
-    for x in items:x["source"]="高雄市政府青年局"
+    items=[];seen=set();todo=[SOURCES["kaohsiung"]];seen_pages=set()
+    while todo and len(seen_pages)<100:
+        url=todo.pop(0)
+        if url in seen_pages:continue
+        seen_pages.add(url)
+        try:r=get(url)
+        except Exception:continue
+        soup=BeautifulSoup(r.text,"html.parser")
+        for a in soup.find_all("a",href=True):
+            href=absolute(r.url,a["href"]); title=clean(a.get_text(" ",strip=True))
+            if "News_Content.aspx" in href:
+                if href not in seen and (title or re.search(r'[?&]s=\d+',href)):
+                    parent=a.find_parent(["li","div","article"])
+                    context=clean(parent.get_text(" ",strip=True)) if parent else title
+                    key=(title+" "+context).lower()
+                    if any(k.lower() in key for k in ["課程","培訓","工作坊","講座","報名","人才培育","找課程","ktv","k-tv","星團隊","新媒體","高速青春"]):
+                        items.append({"source":"高雄市政府青年局","title":title or "高雄青年課程","url":href,"dates":extract_dates(context),"context":context[:1000]})
+                        seen.add(href)
+                if href not in seen_pages and len(seen_pages)<100:
+                    todo.append(href)
+            elif any(x in href.lower() for x in ["news.aspx","activity","course"]) and href not in seen_pages:
+                todo.append(href)
     return items
 
 def inspect_taiwanjobs():
@@ -237,7 +313,7 @@ def inspect_taiwanjobs():
     for a in soup.find_all("a",href=True):
         txt=clean(a.get_text(" ",strip=True)); href=absolute(r.url,a["href"])
         if any(k in (txt+" "+href) for k in ["課程","course","training"]): links.append({"title":txt,"url":href})
-    return {"forms":forms[:10],"scripts":scripts[-30:],"links":links[:80],"html_len":len(r.text)}
+    return {"forms":forms[:10],"scripts":scripts[-30:],"links":links[:120],"html_len":len(r.text),"title":clean(soup.title.get_text(" ",strip=True)) if soup.title else ""}
 
 SCRAPERS={"ntpc":scrape_ntpc,"yip":scrape_yip,"startup":scrape_startup,"youthfirst":scrape_youthfirst,
           "taichung":scrape_taichung,"taipei":scrape_taipei,"kaohsiung":scrape_kaohsiung}
