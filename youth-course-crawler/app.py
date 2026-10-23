@@ -379,8 +379,6 @@ def inspect_taiwanjobs():
     return {"scripts":scripts[-30:],"links":links[:120],"controls":controls[:250],"hints":sorted(hints)[:250],
             "html_len":len(r.text),"title":clean(soup.title.get_text(" ",strip=True)) if soup.title else ""}
 
-SCRAPERS=
-
 SCRAPERS={"ntpc":scrape_ntpc,"yip":scrape_yip,"startup":scrape_startup,"youthfirst":scrape_youthfirst,
           "taichung":scrape_taichung,"taipei":scrape_taipei,"kaohsiung":scrape_kaohsiung,"smelearning":scrape_smelearning}
 
