@@ -43,7 +43,7 @@ def get(url, params=None):
         "Pragma":"no-cache",
         "Upgrade-Insecure-Requests":"1",
     }
-    protected = any(x in host for x in ["startup.sme.gov.tw","youthfirst.yda.gov.tw","1catchjob.taichung.gov.tw","youth.kcg.gov.tw"])
+    protected = any(x in host for x in ["startup.sme.gov.tw","youthfirst.yda.gov.tw","1catchjob.taichung.gov.tw","youth.kcg.gov.tw","smelearning.sme.gov.tw"])
     if protected:
         r = cffi_requests.get(url, params=params, headers=headers, timeout=30, allow_redirects=True, verify=False, impersonate="chrome124")
         if r.status_code >= 400:
@@ -310,42 +310,73 @@ def scrape_kaohsiung():
     return items
 
 def _parse_sme_page(page):
-    r=get(SOURCES["smelearning"],params={"page":page,"price_sort":0})
+    last=None
+    for attempt in range(3):
+        try:
+            r=get(SOURCES["smelearning"],params={"page":page,"price_sort":0})
+            last=r
+            break
+        except Exception:
+            time.sleep(0.35*(attempt+1))
+    if last is None: raise RuntimeError(f"SME page {page} failed after retries")
+    r=last
     soup=BeautifulSoup(r.text,"html.parser")
     out=[]; seen=set()
     for a in soup.find_all("a",href=True):
-        href=absolute(r.url,a["href"])
-        if "class.php?course=" not in href or href in seen: continue
+        raw=a.get("href") or ""
+        m=re.search(r'class\.php\?course=(\d+)',raw)
+        if not m: continue
+        cid=m.group(1)
+        href=f"https://smelearning.sme.gov.tw/class.php?course={cid}"
+        if href in seen: continue
         node=a; context=clean(a.get_text(" ",strip=True)); heading=""
-        for _ in range(8):
+        for _ in range(10):
             node=node.parent if node else None
             if not node: break
             txt=clean(node.get_text(" ",strip=True))
             h=node.find(["h2","h3","h4","h5"])
             if h: heading=clean(h.get_text(" ",strip=True))
-            if re.search(r'\d+\s*分鐘',txt) and heading:
+            if re.search(r'\d+\s*分鐘',txt) and ("免費" in txt or "收費" in txt):
                 context=txt; break
         title=heading or clean(a.get_text(" ",strip=True))
-        if not title or title in ["免費課程","收費課程"]: continue
+        if not title or title in ["免費課程","收費課程","所有課程","課程分類"]:
+            # Last fallback: search nearest heading around link.
+            par=a.find_parent(["article","li","div","section"])
+            hh=par.find(["h2","h3","h4","h5"]) if par else None
+            title=clean(hh.get_text(" ",strip=True)) if hh else ""
+        if not title: continue
         mm=re.search(r'(\d{1,4})\s*分鐘',context)
         mins=int(mm.group(1)) if mm else None
-        out.append({"source":"中小企業網路大學校","title":title,"url":href,"dates":[],"context":context[:1800],
+        out.append({"source":"中小企業網路大學校","title":title,"url":href,"dates":[],"context":context[:2200],
                     "hours":round(mins/60,2) if mins is not None else None,
                     "cost":0 if "免費" in context else None,"mode":"線上"})
         seen.add(href)
     return out
 
 def scrape_smelearning():
-    items=[]; seen=set()
-    # Current official list has roughly 47 pages; fetch concurrently so full coverage is practical.
-    with ThreadPoolExecutor(max_workers=8) as ex:
-        futs={ex.submit(_parse_sme_page,p):p for p in range(1,61)}
+    items=[]; seen=set(); failures=[]
+    # Official site currently exposes 47 pagination pages. Use modest concurrency + retries to avoid dropped pages.
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        futs={ex.submit(_parse_sme_page,p):p for p in range(1,48)}
         for fut in as_completed(futs):
+            p=futs[fut]
             try: rows=fut.result()
-            except Exception: continue
+            except Exception as e:
+                failures.append({"page":p,"error":repr(e)}); continue
             for x in rows:
                 if x["url"] in seen: continue
                 seen.add(x["url"]); items.append(x)
+    # Read the site's own advertised total for completeness checking.
+    advertised=None
+    try:
+        r=get(SOURCES["smelearning"])
+        m=re.search(r'共有\s*([0-9,]+)\s*堂課程',clean(BeautifulSoup(r.text,"html.parser").get_text(" ",strip=True)))
+        if m: advertised=int(m.group(1).replace(",",""))
+    except Exception: pass
+    for x in items:
+        x["advertised_total"]=advertised
+        x["crawl_failures"]=len(failures)
+    print("SME_AUDIT "+json.dumps({"advertised":advertised,"actual":len(items),"failures":failures},ensure_ascii=False),flush=True)
     return items
 
 def inspect_taiwanjobs():
@@ -376,8 +407,18 @@ def inspect_taiwanjobs():
         for m in re.finditer(r'["\']([^"\']*(?:/course/|api/|ajax|conditions)[^"\']*)["\']',txt,re.I):
             x=clean(m.group(1))
             if 2<len(x)<300: hints.add(x)
+    api_context=[]
+    for js in scripts:
+        if "course.taiwanjobs.gov.tw" not in js: continue
+        try:
+            rr=get(js); txt=rr.text
+        except Exception: continue
+        for needle in ["/api/Course/paging","CourseTypeList","SourceType","courseLocation","CategoryMajorNames"]:
+            pos=txt.find(needle)
+            if pos>=0:
+                api_context.append({"script":js,"needle":needle,"context":txt[max(0,pos-1800):pos+3500]})
     return {"scripts":scripts[-30:],"links":links[:120],"controls":controls[:250],"hints":sorted(hints)[:250],
-            "html_len":len(r.text),"title":clean(soup.title.get_text(" ",strip=True)) if soup.title else ""}
+            "api_context":api_context[:20],"html_len":len(r.text),"title":clean(soup.title.get_text(" ",strip=True)) if soup.title else ""}
 
 SCRAPERS={"ntpc":scrape_ntpc,"yip":scrape_yip,"startup":scrape_startup,"youthfirst":scrape_youthfirst,
           "taichung":scrape_taichung,"taipei":scrape_taipei,"kaohsiung":scrape_kaohsiung,"smelearning":scrape_smelearning}
@@ -478,7 +519,7 @@ def background_audit():
     try:
         tj=inspect_taiwanjobs()
         result={"ok":True,"count":0,"diagnostic":True,"scripts":len(tj.get("scripts",[])),"links":len(tj.get("links",[])),
-                "controls":tj.get("controls",[])[:40],"hints":tj.get("hints",[])[:80]}
+                "controls":tj.get("controls",[])[:40],"hints":tj.get("hints",[])[:80],"api_context":tj.get("api_context",[])[:8]}
     except Exception as e:
         result={"ok":False,"count":0,"error":repr(e)}
     health["taiwanjobs"]=result
