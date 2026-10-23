@@ -4,6 +4,7 @@ import requests, re, time
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse, urlencode
 from datetime import datetime, timezone, timedelta
+import threading, json, os
 
 app = Flask(__name__)
 UA = "Mozilla/5.0 (compatible; YouthCourseRadar/1.0; +https://youth-course-radar-tw-2026.onrender.com)"
@@ -241,6 +242,26 @@ def inspect_taiwanjobs():
 SCRAPERS={"ntpc":scrape_ntpc,"yip":scrape_yip,"startup":scrape_startup,"youthfirst":scrape_youthfirst,
           "taichung":scrape_taichung,"taipei":scrape_taipei,"kaohsiung":scrape_kaohsiung}
 
+
+def background_audit():
+    time.sleep(3)
+    summary={}
+    for name,fn in SCRAPERS.items():
+        t=time.time()
+        try:
+            items=fn()
+            summary[name]={"ok":True,"count":len(items),"sample_titles":[x.get("title") for x in items[:3]],"seconds":round(time.time()-t,2)}
+        except Exception as e:
+            summary[name]={"ok":False,"error":repr(e),"seconds":round(time.time()-t,2)}
+    try:
+        tj=inspect_taiwanjobs()
+        summary["taiwanjobs"]={"ok":True,"forms":len(tj.get("forms",[])),"scripts":len(tj.get("scripts",[])),"links":len(tj.get("links",[])),
+                               "form_actions":[x.get("action") for x in tj.get("forms",[])[:4]],
+                               "script_tail":tj.get("scripts",[])[-5:]}
+    except Exception as e:
+        summary["taiwanjobs"]={"ok":False,"error":repr(e)}
+    print("CRAWL_STATUS "+json.dumps(summary,ensure_ascii=False),flush=True)
+
 @app.get("/")
 def root():
     return jsonify({"ok":True,"service":"Youth Course Radar crawler","sources":list(SOURCES.keys()),"date":TODAY})
@@ -266,6 +287,8 @@ def source(name):
     fn=SCRAPERS.get(name)
     if not fn:return jsonify({"error":"unknown source"}),404
     return jsonify({"source":name,"items":fn()})
+
+threading.Thread(target=background_audit, daemon=True).start()
 
 if __name__=="__main__":
     app.run(host="0.0.0.0",port=10000)
