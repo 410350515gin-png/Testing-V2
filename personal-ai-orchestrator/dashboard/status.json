@@ -1,0 +1,14 @@
+{
+  "project": "psychology-experiment",
+  "run": "demo-v1",
+  "overall": "running",
+  "updated_at": "2026-10-27T03:00:00+08:00",
+  "nodes": [
+    {"id":"planner","label":"Planner / Router","actor":"Claude","status":"completed","detail":"Loaded project state and routed work"},
+    {"id":"research","label":"Research","actor":"Claude / Perplexity","status":"completed","detail":"Evidence check complete"},
+    {"id":"writer","label":"Writer","actor":"Claude","status":"running","detail":"Preparing revision output"},
+    {"id":"review","label":"Reviewer","actor":"ChatGPT","status":"queued","detail":"Independent second-model review"},
+    {"id":"human","label":"Human Gate","actor":"You","status":"queued","detail":"Only activates for high-impact decisions"},
+    {"id":"integrator","label":"Integrator","actor":"Claude","status":"queued","detail":"Merge accepted findings and update state"}
+  ]
+}
