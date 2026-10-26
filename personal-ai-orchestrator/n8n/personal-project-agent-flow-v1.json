@@ -1,0 +1,289 @@
+{
+  "name": "Personal Project Agent Flow V1",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -900,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "project_name",
+              "value": "psychology-experiment"
+            },
+            {
+              "name": "user_instruction",
+              "value": "Advance project safely"
+            },
+            {
+              "name": "project_type",
+              "value": "research"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "input",
+      "name": "Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => ({json:{...item.json,run_id:new Date().toISOString(),status:\"running\",route:{research:true,writer:true,reviewer2:false,coding:item.json.project_type===\"software\"},nodes:[{id:\"planner\",status:\"completed\",actor:\"Claude\"},{id:\"research\",status:\"queued\",actor:\"Claude Web / Perplexity\"},{id:\"writer\",status:\"queued\",actor:\"Claude\"},{id:\"reviewer2\",status:\"queued\",actor:\"ChatGPT\"},{id:\"coding\",status:\"queued\",actor:\"Codex\"},{id:\"human_gate\",status:\"queued\",actor:\"User\"},{id:\"integrator\",status:\"queued\",actor:\"Claude\"}]}}));"
+      },
+      "id": "planner",
+      "name": "Planner / Router",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -450,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "research-route",
+              "leftValue": "={{ $json.route.research }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-research",
+      "name": "Need Research?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -220,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.perplexity.ai/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.PERPLEXITY_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({model:'sonar',messages:[{role:'system',content:'You are a research specialist. Return concise findings with sources.'},{role:'user',content:$json.user_instruction}]}) }}",
+        "options": {}
+      },
+      "id": "perplexity",
+      "name": "Perplexity Research",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        20,
+        -200
+      ],
+      "disabled": true,
+      "notes": "Enable after PERPLEXITY_API_KEY is configured. Until then, Claude-native research remains the fallback."
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => ({json:{...item.json,research_result:item.json.research_result||\"Use Claude-native research fallback until Perplexity node is enabled.\",writer_task:\"Draft or revise only reversible content. Never overwrite canonical files without rollback.\"}}));"
+      },
+      "id": "writer",
+      "name": "Claude Writer Adapter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        -20
+      ],
+      "notes": "Adapter placeholder. V1 execution remains Claude Project; later replace with supported Anthropic API/connector."
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => ({json:{...item.json,review_packet:{instruction:\"Independent second-model review\",focus:[\"methodology\",\"logic\",\"cross-file consistency\",\"risk\"],source:\"Drive/_handoff\"}}}));"
+      },
+      "id": "review-packet",
+      "name": "Build ChatGPT Review Packet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const highRisk = Boolean($json.high_risk); return [{json:{...$json,human_gate:highRisk?\"waiting_human\":\"approved_automatically\",status:highRisk?\"waiting_human\":\"running\"}}];"
+      },
+      "id": "human-gate",
+      "name": "Human Gate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        740,
+        -20
+      ],
+      "notes": "Replace with Send and Wait / form approval when n8n runtime is connected."
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => ({json:{...item.json,status:item.json.human_gate===\"waiting_human\"?\"waiting_human\":\"completed\",final_summary:{project:item.json.project_name,run_id:item.json.run_id,next:item.json.human_gate===\"waiting_human\"?\"Await user decision\":\"Update Notion/Drive/GitHub safely\"}}}));"
+      },
+      "id": "integrator",
+      "name": "Final Integrator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        980,
+        -20
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input": {
+      "main": [
+        [
+          {
+            "node": "Planner / Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Planner / Router": {
+      "main": [
+        [
+          {
+            "node": "Need Research?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Need Research?": {
+      "main": [
+        [
+          {
+            "node": "Perplexity Research",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Claude Writer Adapter",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Claude Writer Adapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity Research": {
+      "main": [
+        [
+          {
+            "node": "Claude Writer Adapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Writer Adapter": {
+      "main": [
+        [
+          {
+            "node": "Build ChatGPT Review Packet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build ChatGPT Review Packet": {
+      "main": [
+        [
+          {
+            "node": "Human Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human Gate": {
+      "main": [
+        [
+          {
+            "node": "Final Integrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "versionId": "11111111-1111-4111-8111-111111111111",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
