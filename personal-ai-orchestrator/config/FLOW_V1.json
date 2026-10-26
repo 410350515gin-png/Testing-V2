@@ -1,0 +1,43 @@
+{
+  "name": "Personal Project Agent Flow V1",
+  "version": "1.0",
+  "entry": "claude_orchestrator",
+  "nodes": [
+    {"id":"claude_orchestrator","type":"orchestrator","actor":"Claude","purpose":"Interpret natural language, load project state, plan and route"},
+    {"id":"project_state","type":"state","actor":"Notion+Drive/GitHub","purpose":"Canonical project state and file references"},
+    {"id":"research","type":"specialist","actor":"ClaudeWeb|Perplexity","purpose":"External/current evidence only when needed"},
+    {"id":"writer","type":"specialist","actor":"Claude","purpose":"Drafting, synthesis and document revision"},
+    {"id":"reviewer1","type":"specialist","actor":"ClaudeIsolated","purpose":"Independent first-pass review"},
+    {"id":"reviewer2","type":"specialist","actor":"ChatGPT","purpose":"Independent second-model methodology/logic review"},
+    {"id":"coding","type":"specialist","actor":"Codex","purpose":"Software implementation, debug and tests"},
+    {"id":"human_gate","type":"gate","actor":"User","purpose":"Approve high-impact or destructive decisions"},
+    {"id":"integrator","type":"integrator","actor":"Claude","purpose":"Adopt/reject findings and produce final action set"},
+    {"id":"workspace_write","type":"executor","actor":"Drive|Notion|GitHub","purpose":"Deterministic safe writes and status updates"}
+  ],
+  "edges": [
+    ["claude_orchestrator","project_state"],
+    ["project_state","claude_orchestrator"],
+    ["claude_orchestrator","research"],
+    ["claude_orchestrator","writer"],
+    ["claude_orchestrator","reviewer1"],
+    ["claude_orchestrator","reviewer2"],
+    ["claude_orchestrator","coding"],
+    ["research","integrator"],
+    ["writer","integrator"],
+    ["reviewer1","integrator"],
+    ["reviewer2","integrator"],
+    ["coding","integrator"],
+    ["integrator","human_gate"],
+    ["human_gate","integrator"],
+    ["integrator","workspace_write"],
+    ["workspace_write","project_state"]
+  ],
+  "routing_rules": {
+    "research":"Only when project corpus and Claude web search are insufficient or current external evidence is required",
+    "reviewer2":"Finalize, methodology/statistics, conflicting reviews, high-impact decision",
+    "coding":"Software projects only",
+    "human_gate":"Locked research/design decisions, destructive file ops, production deploy, secrets, external submission, budget overrun"
+  },
+  "status_contract": ["queued","running","completed","failed","waiting_human"],
+  "optional_v2": ["Graphify shared knowledge layer"]
+}
