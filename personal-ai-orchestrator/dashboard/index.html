@@ -1,0 +1,52 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Personal Project Agent Flow</title>
+<style>
+body{font-family:system-ui,-apple-system,sans-serif;margin:0;background:#f6f7f9;color:#15171a}
+main{max-width:900px;margin:auto;padding:28px}
+h1{font-size:28px;margin:0 0 6px}.sub{color:#667085;margin-bottom:24px}
+.grid{display:grid;gap:12px}.node{background:#fff;border:1px solid #e4e7ec;border-radius:14px;padding:16px;display:grid;grid-template-columns:16px 1fr auto;gap:12px;align-items:start}
+.dot{width:12px;height:12px;border-radius:999px;margin-top:5px;background:#98a2b3}.completed .dot{background:#12b76a}.running .dot{background:#f79009}.failed .dot{background:#f04438}.waiting_human .dot{background:#7f56d9}
+.name{font-weight:700}.meta,.detail{color:#667085;font-size:14px}.pill{font-size:12px;border-radius:999px;padding:5px 9px;background:#f2f4f7}
+.summary{background:#fff;border:1px solid #e4e7ec;border-radius:14px;padding:16px;margin-bottom:16px}
+</style>
+<main>
+<h1>Personal Project Agent Flow</h1>
+<div class="sub">Visual run status — secrets and private reasoning are never shown.</div>
+<div id="summary" class="summary">Loading run status…</div>
+<div id="nodes" class="grid"></div>
+</main>
+<script>
+(async()=>{
+  const fallback={
+  "project": "psychology-experiment",
+  "run": "demo-v1",
+  "overall": "running",
+  "updated_at": "2026-10-27T03:00:00+08:00",
+  "nodes": [
+    {"id":"planner","label":"Planner / Router","actor":"Claude","status":"completed","detail":"Loaded project state and routed work"},
+    {"id":"research","label":"Research","actor":"Claude / Perplexity","status":"completed","detail":"Evidence check complete"},
+    {"id":"writer","label":"Writer","actor":"Claude","status":"running","detail":"Preparing revision output"},
+    {"id":"review","label":"Reviewer","actor":"ChatGPT","status":"queued","detail":"Independent second-model review"},
+    {"id":"human","label":"Human Gate","actor":"You","status":"queued","detail":"Only activates for high-impact decisions"},
+    {"id":"integrator","label":"Integrator","actor":"Claude","status":"queued","detail":"Merge accepted findings and update state"}
+  ]
+}
+;
+  let data=fallback;
+  try{const r=await fetch('./status.json',{cache:'no-store'});if(r.ok)data=await r.json()}catch(e){}
+  document.getElementById('summary').textContent=data.project+' · '+data.run+' · '+data.overall+' · updated '+data.updated_at;
+  const root=document.getElementById('nodes');
+  root.innerHTML='';
+  for(const n of data.nodes){
+    const el=document.createElement('section');el.className='node '+n.status;
+    el.innerHTML='<span class="dot"></span><div><div class="name"></div><div class="meta"></div><div class="detail"></div></div><span class="pill"></span>';
+    el.querySelector('.name').textContent=n.label;
+    el.querySelector('.meta').textContent=n.actor;
+    el.querySelector('.detail').textContent=n.detail||'';
+    el.querySelector('.pill').textContent=n.status;
+    root.appendChild(el);
+  }
+})();
+</script>
