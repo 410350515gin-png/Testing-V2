@@ -1,33 +1,41 @@
-# Personal AI Orchestrator v1
+# Personal Project Agent Flow v1
 
-Goal: one conversational entry point that can advance a project, consult shared project knowledge, delegate reasoning/writing, execute deterministic automations, and report only decisions that need the user.
+Goal: one natural-language entry point that can advance a project, route work to specialist AI roles, preserve project state, pause for human decisions, and show visible execution status.
 
-## Roles
-- OpenClaw: conversational manager / router.
-- Graphify: shared project knowledge graph.
-- ChatGPT/Codex: reasoning, methodology review, QA.
-- Claude: long-form synthesis and document drafting.
-- Perplexity API: external research only when current/outside evidence is needed.
-- n8n: deterministic execution (Drive, Notion, file/version operations, notifications).
-- Google Drive: canonical deliverables.
-- Notion: project state, tasks, decisions, change log.
+## V1 architecture
 
-## First project
+User
+→ Claude Project / Orchestrator
+→ Project State (Notion + canonical Drive/GitHub links)
+→ Specialist branches
+   - Claude: planner, writer, integrator, first-pass reviewer
+   - Perplexity: external/current research when needed
+   - ChatGPT: second-model review / methodology / logic
+   - Codex: coding/debug/test branch for software projects
+→ Human Gate
+→ Drive / Notion / GitHub
+→ Visual run status
+
+Gemini is intentionally excluded from V1. Graphify is reserved for V2 as an optional shared knowledge layer.
+
+## Fixed entry intents
+- Start_Project: create/register a project and its state.
+- Advance_Project: continue all safe work.
+- Review_Project: run read-only/low-risk review.
+- Finalize_Project: final QA and prepare for submission/deploy.
+
+## First validated project
 Psychology Experimental Methods proposal.
 
-### One-command target
-"Advance the psychology experiment project as far as safely possible."
+The Claude-native V1 has already demonstrated:
+- parallel Researcher + Reviewer roles,
+- Writer tracked-change output,
+- Integrator decisions,
+- Notion state updates,
+- Drive _archive / _runs / _handoff,
+- Human Gate blocking destructive actions.
 
-The system should:
-1. Read current project state.
-2. Locate canonical files.
-3. Query project knowledge before re-reading everything.
-4. Identify incomplete work.
-5. Delegate drafting/review to the appropriate model.
-6. Execute low-risk file/task operations.
-7. Stop only for high-impact design decisions.
-8. Update Drive/Notion.
-9. Return a compact completion report.
-
-## Safety rule
-Never store provider credentials in GitHub. Use runtime environment variables / secret stores only.
+## Safety
+Never store provider credentials in GitHub.
+Canonical files are never destructively overwritten without a rollback path.
+High-impact research/design/deploy/delete actions require Human Gate approval.
