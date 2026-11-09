@@ -32,3 +32,17 @@ jobs:
                   ast.parse(src)
           print('Notebook JSON and Python source: OK')
           PY
+
+      - name: Install speech synthesis engine
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install edge-tts
+      - name: Generate original three-voice demonstration MP3
+        run: python novel-audiobook/render_actions.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: three-voice-audiobook-demo
+          path: output-audiobook/audiobook.mp3
+          if-no-files-found: error
+          retention-days: 7
