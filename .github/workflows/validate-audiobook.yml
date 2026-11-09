@@ -51,7 +51,7 @@ jobs:
         timeout-minutes: 35
         run: |
           mkdir -p official-ebooks official-audiobooks official-models official-voices official-tmp
-          printf '晚風輕輕吹過街道。這是一段原創的中文語音合成測試。\n' > official-ebooks/test.txt
+          cp novel-audiobook/inputs/ch151_user_excerpt.txt official-ebooks/ch151_user_excerpt.txt
           docker pull athomasson2/ebook2audiobook:cpu
           docker run --rm \
             -v "$PWD/official-ebooks:/app/ebooks" \
@@ -65,7 +65,7 @@ jobs:
       - name: Upload official ebook2audiobook MP3
         uses: actions/upload-artifact@v4
         with:
-          name: official-e2a-audiobook
+          name: official-e2a-ch151-excerpt
           path: official-audiobooks/
           if-no-files-found: error
           retention-days: 7
