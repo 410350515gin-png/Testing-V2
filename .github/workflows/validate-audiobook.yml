@@ -53,13 +53,13 @@ jobs:
           mkdir -p official-ebooks official-audiobooks official-models official-voices official-tmp
           printf '晚風輕輕吹過街道。這是一段原創的中文語音合成測試。\n' > official-ebooks/test.txt
           docker pull athomasson2/ebook2audiobook:cpu
-          docker run --rm \\
-            -v "$PWD/official-ebooks:/app/ebooks" \\
-            -v "$PWD/official-audiobooks:/app/audiobooks" \\
-            -v "$PWD/official-models:/app/models" \\
-            -v "$PWD/official-voices:/app/voices" \\
-            -v "$PWD/official-tmp:/app/tmp" \\
-            athomasson2/ebook2audiobook:cpu \\
+          docker run --rm \
+            -v "$PWD/official-ebooks:/app/ebooks" \
+            -v "$PWD/official-audiobooks:/app/audiobooks" \
+            -v "$PWD/official-models:/app/models" \
+            -v "$PWD/official-voices:/app/voices" \
+            -v "$PWD/official-tmp:/app/tmp" \
+            athomasson2/ebook2audiobook:cpu \
             --headless --ebook /app/ebooks/test.txt --language zho --device CPU --output_format mp3
           find official-audiobooks -type f -iname '*.mp3' -size +1k | grep -q .
       - name: Upload official ebook2audiobook MP3
