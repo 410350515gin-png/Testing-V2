@@ -138,9 +138,27 @@ def seg_key(seg):
 
 
 async def edge_synth(text, vp, out_path):
+    """依序嘗試：原設定 → 去掉音高 → 只留語速 → 無調整 → 備用聲線；每種試 2 次。"""
     import edge_tts
-    c = edge_tts.Communicate(text, vp["voice"], rate=vp["rate"], pitch=vp["pitch"], volume=vp["volume"])
-    await c.save(str(out_path))
+    tries = [vp,
+             {**vp, "pitch": "+0Hz"},
+             {**vp, "pitch": "+0Hz", "volume": "+0%"},
+             {**vp, "rate": "+0%", "pitch": "+0Hz", "volume": "+0%"}]
+    tries += [{**vp, "voice": alt} for alt in VOICE_FALLBACK.get(vp["voice"], [])]
+    last = None
+    for i, t in enumerate(tries):
+        for n in range(2):
+            try:
+                await edge_tts.Communicate(text, t["voice"], rate=t["rate"], pitch=t["pitch"],
+                                           volume=t["volume"]).save(str(out_path))
+                if Path(out_path).exists() and Path(out_path).stat().st_size > 0:
+                    if i:
+                        print(f"  （改用 {t['voice']} {t['rate']} {t['pitch']} {t['volume']}：{text[:12]}）")
+                    return
+            except Exception as e:
+                last = e
+            await asyncio.sleep(1.5 * (n + 1))
+    raise RuntimeError(f"所有設定都無法出聲：{last}")
 
 
 async def synth_all(segs, seg_dir, synth=edge_synth, retries=3):
