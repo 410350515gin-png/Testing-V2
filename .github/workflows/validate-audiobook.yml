@@ -1,0 +1,71 @@
+name: Validate audiobook notebook
+on:
+  push:
+    paths:
+      - 'novel-audiobook/**'
+      - '.github/workflows/validate-audiobook.yml'
+  pull_request:
+    paths:
+      - 'novel-audiobook/**'
+      - '.github/workflows/validate-audiobook.yml'
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check notebook structure and Python syntax
+        run: |
+          python - <<'PY'
+          import json, ast
+          path='novel-audiobook/novel_audiobook_colab.ipynb'
+          with open(path,encoding='utf-8') as f: nb=json.load(f)
+          assert nb['nbformat']==4
+          for cell in nb['cells']:
+              if cell['cell_type']=='code':
+                  src=''.join(cell['source'])
+                  # Colab magic and shell commands are valid inside notebooks, not plain Python
+                  src='\n'.join('pass' if ln.lstrip().startswith(('!', '%')) else ln for ln in src.splitlines())
+                  ast.parse(src)
+          print('Notebook JSON and Python source: OK')
+          PY
+
+      - name: Install speech synthesis engine
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install edge-tts
+      - name: Generate original three-voice demonstration MP3
+        run: python novel-audiobook/render_actions.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: three-voice-audiobook-demo
+          path: output-audiobook/audiobook.mp3
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Official ebook2audiobook CPU smoke test
+        timeout-minutes: 35
+        run: |
+          mkdir -p official-ebooks official-audiobooks official-models official-voices official-tmp
+          cp novel-audiobook/inputs/ch151_user_excerpt.txt official-ebooks/ch151_user_excerpt.txt
+          docker pull athomasson2/ebook2audiobook:cpu
+          docker run --rm \
+            -v "$PWD/official-ebooks:/app/ebooks" \
+            -v "$PWD/official-audiobooks:/app/audiobooks" \
+            -v "$PWD/official-models:/app/models" \
+            -v "$PWD/official-voices:/app/voices" \
+            -v "$PWD/official-tmp:/app/tmp" \
+            athomasson2/ebook2audiobook:cpu \
+            --headless --ebook /app/ebooks/ch151_user_excerpt.txt --language zho --device CPU --output_format mp3
+          find official-audiobooks -type f -iname '*.mp3' -size +1k | grep -q .
+      - name: Upload official ebook2audiobook MP3
+        uses: actions/upload-artifact@v4
+        with:
+          name: official-e2a-ch151-excerpt
+          path: official-audiobooks/
+          if-no-files-found: error
+          retention-days: 7

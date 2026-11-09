@@ -1,0 +1,47 @@
+name: Generate Chinese Audiobook MP3
+on:
+  push:
+    branches:
+      - feature/novel-audiobook-colab
+    paths:
+      - 'novel-audiobook/render_actions.py'
+      - '.github/workflows/generate-audiobook.yml'
+  workflow_dispatch:
+    inputs:
+      source_file:
+        description: 'Optional path to authorized speaker-tagged TXT or CSV in the repository (leave blank for original demo)'
+        required: false
+        default: ''
+jobs:
+  render-audio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install free speech synthesis dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install --disable-pip-version-check edge-tts==7.2.7
+      - name: Create audiobook MP3
+        env:
+          SOURCE_FILE: ${{ inputs.source_file }}
+        shell: bash
+        run: |
+          if [[ -n "${SOURCE_FILE}" ]]; then
+            python novel-audiobook/render_actions.py --input "${SOURCE_FILE}"
+          else
+            python novel-audiobook/render_actions.py
+          fi
+      - name: Publish MP3 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: audiobook-mp3
+          path: output-audiobook/audiobook.mp3
+          if-no-files-found: error
+          retention-days: 7
