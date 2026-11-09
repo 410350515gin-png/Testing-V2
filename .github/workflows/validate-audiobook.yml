@@ -1,0 +1,34 @@
+name: Validate audiobook notebook
+on:
+  push:
+    paths:
+      - 'novel-audiobook/**'
+      - '.github/workflows/validate-audiobook.yml'
+  pull_request:
+    paths:
+      - 'novel-audiobook/**'
+      - '.github/workflows/validate-audiobook.yml'
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check notebook structure and Python syntax
+        run: |
+          python - <<'PY'
+          import json, ast
+          path='novel-audiobook/novel_audiobook_colab.ipynb'
+          with open(path,encoding='utf-8') as f: nb=json.load(f)
+          assert nb['nbformat']==4
+          for cell in nb['cells']:
+              if cell['cell_type']=='code':
+                  src=''.join(cell['source'])
+                  # Colab magic and shell commands are valid inside notebooks, not plain Python
+                  src='\n'.join('pass' if ln.lstrip().startswith(('!', '%')) else ln for ln in src.splitlines())
+                  ast.parse(src)
+          print('Notebook JSON and Python source: OK')
+          PY
