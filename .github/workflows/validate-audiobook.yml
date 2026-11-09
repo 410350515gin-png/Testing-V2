@@ -60,7 +60,7 @@ jobs:
             -v "$PWD/official-voices:/app/voices" \
             -v "$PWD/official-tmp:/app/tmp" \
             athomasson2/ebook2audiobook:cpu \
-            --headless --ebook /app/ebooks/test.txt --language zho --device CPU --output_format mp3
+            --headless --ebook /app/ebooks/ch151_user_excerpt.txt --language zho --device CPU --output_format mp3
           find official-audiobooks -type f -iname '*.mp3' -size +1k | grep -q .
       - name: Upload official ebook2audiobook MP3
         uses: actions/upload-artifact@v4
