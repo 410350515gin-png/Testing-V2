@@ -15,6 +15,45 @@ VOICES = {
 }
 DEFAULT_SPEAKER = "旁白"   # 無法確認說話者 → 旁白
 
+# 某個聲線失效時依序改用（優先臺灣，其次其他國語男聲/女聲）
+VOICE_FALLBACK = {
+    "zh-TW-YunJheNeural": ["zh-CN-YunxiNeural", "zh-CN-YunjianNeural", "zh-CN-YunyangNeural"],
+    "zh-TW-HsiaoChenNeural": ["zh-TW-HsiaoYuNeural", "zh-CN-XiaoxiaoNeural"],
+    "zh-TW-HsiaoYuNeural": ["zh-TW-HsiaoChenNeural", "zh-CN-XiaoyiNeural"],
+}
+_resolved = False
+
+
+async def resolve_voices():
+    """實測每個聲線能否出聲；不能就換成備用聲線（每次執行結果一致）。"""
+    global _resolved
+    if _resolved:
+        return
+    import edge_tts, tempfile, os
+    ok = {}
+    async def works(v):
+        if v not in ok:
+            fd, tmp = tempfile.mkstemp(suffix=".mp3"); os.close(fd)
+            try:
+                await edge_tts.Communicate("測試一下。", v).save(tmp)
+                ok[v] = os.path.getsize(tmp) > 0
+            except Exception:
+                ok[v] = False
+            finally:
+                os.remove(tmp)
+        return ok[v]
+    for name, cfg in VOICES.items():
+        if await works(cfg["voice"]):
+            continue
+        for alt in VOICE_FALLBACK.get(cfg["voice"], []):
+            if await works(alt):
+                print(f"⚠ {cfg['voice']} 無法使用，{name} 改用 {alt}")
+                cfg["voice"] = alt
+                break
+        else:
+            raise RuntimeError(f"{name} 的聲線與備用聲線都無法使用")
+    _resolved = True
+
 # ---------- 2. 情緒 → 語速/音高/音量微調（Edge TTS 無真正情緒參數） ----------
 EMOTIONS = {
     "平常": (0, 0, 0),
@@ -204,6 +243,8 @@ def update_progress(progress_path, chapter, segs, mp3_path, total_sec, new, reus
 
 async def produce_chapter(chapter, script_path, base_dir, synth=edge_synth, record=True):
     base = Path(base_dir); base.mkdir(parents=True, exist_ok=True)
+    if synth is edge_synth:
+        await resolve_voices()
     text = Path(script_path).read_text(encoding="utf-8")
     segs = parse_script(text)
     if not segs:

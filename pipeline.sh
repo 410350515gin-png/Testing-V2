@@ -4,7 +4,8 @@ set -uo pipefail
 mkdir -p output/edge work/out
 E2A_OK=0
 if [ "${USE_E2A:-1}" = "1" ] && docker pull -q athomasson2/ebook2audiobook:cpu; then E2A_OK=1; fi
-python make_voices.py
+edge-tts --list-voices | grep -E '^zh-(TW|CN)' | head -30
+python make_voices.py || { echo '參考聲音失敗，略過 ebook2audiobook'; E2A_OK=0; }
 
 e2a() {  # $1=SML 檔 $2=輸出名稱
   rm -rf work/out && mkdir -p work/out
@@ -40,3 +41,4 @@ for f in scripts/第*章.txt; do
   make "$n"
 done
 rm -rf output/edge/_work output/edge/片段快取
+[ -f output/試聽.mp3 ] || { echo '沒有產生試聽音檔'; exit 1; }

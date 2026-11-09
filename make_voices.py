@@ -10,6 +10,7 @@ OUT = Path("work/voices")
 
 async def main():
     OUT.mkdir(parents=True, exist_ok=True)
+    await C.resolve_voices()
     for name in C.VOICES:
         mp3 = OUT / f"{name}.mp3"
         vp = C.voice_params({"speaker": name, "emotion": "平常"})
