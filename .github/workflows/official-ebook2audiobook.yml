@@ -1,0 +1,46 @@
+name: Official ebook2audiobook CPU proof
+on:
+  push:
+    branches: [feature/novel-audiobook-colab]
+    paths:
+      - '.github/workflows/official-ebook2audiobook.yml'
+  workflow_dispatch:
+jobs:
+  ebook2audiobook:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    permissions:
+      contents: read
+    steps:
+      - name: Check disk capacity
+        run: df -h
+      - name: Create original test material
+        run: |
+          mkdir -p e2a-input e2a-output e2a-models e2a-voices e2a-tmp
+          cat > e2a-input/test.txt <<'TEXT'
+          晚風輕輕吹過街道。遠處傳來鐘聲，燈火映亮了夜色。
+          這是一段用來測試開源語音合成系統的原創文字。
+          TEXT
+      - name: Pull official ebook2audiobook CPU image
+        run: docker pull athomasson2/ebook2audiobook:cpu
+      - name: Generate Chinese audio using official engine
+        run: |
+          timeout 2400 docker run --rm \
+            -v "$PWD/e2a-input:/app/ebooks" \
+            -v "$PWD/e2a-output:/app/audiobooks" \
+            -v "$PWD/e2a-models:/app/models" \
+            -v "$PWD/e2a-voices:/app/voices" \
+            -v "$PWD/e2a-tmp:/app/tmp" \
+            athomasson2/ebook2audiobook:cpu \
+            --headless --ebook /app/ebooks/test.txt --language zho --device CPU --output_format mp3
+      - name: Check result
+        run: |
+          find e2a-output -type f -printf '%p %s bytes\n'
+          find e2a-output -type f -iname '*.mp3' -size +1k | grep -q .
+      - name: Publish official-model audio
+        uses: actions/upload-artifact@v4
+        with:
+          name: ebook2audiobook-official-cpu-test
+          path: e2a-output/
+          retention-days: 7
+          if-no-files-found: error
